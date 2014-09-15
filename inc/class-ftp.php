@@ -13,6 +13,12 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	public $name = 'FTP';
 
 	/**
+	 * Whether to show this service in the tabbed interface of destinations
+	 * @var boolean
+	 */
+	public $is_tab_visible = true;
+
+	/**
 	 * FTP credentials
 	 * @var Array
 	 */
@@ -305,106 +311,94 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		if ( empty( $max_backups ) && isset( $options['ftp_max_backups'] ) )
 			$max_backups = $options['ftp_max_backups']; ?>
 
-		<table class="form-table">
-			<tbody>
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>	
-					<td>
-						<input id="<?php echo $this->get_field_name( 'FTP' ); ?>" type="checkbox" <?php checked( $this->get_field_value( 'FTP' ) ); ?> name="<?php echo $this->get_field_name( 'FTP' ); ?>" value="1" />
-					</td>
-				</tr>
+		<div>
 
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo esc_attr( $hostname ); ?>" />
-					</td>
-				</tr>
-				<tr>
-					<th>
-						<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
+			<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
+			<input id="<?php echo $this->get_field_name( 'FTP' ); ?>" type="checkbox" <?php checked( $this->get_field_value( 'FTP' ) ); ?> name="<?php echo $this->get_field_name( 'FTP' ); ?>" value="1" />
 
-							<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
+		</div>
 
-							<?php if ( extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) : ?>
+		<div>
 
-								<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
+			<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress-pro-ftp' ); ?></label>
 
-								<option <?php selected( $type, 'ssh2' ); ?> value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
+			<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo esc_attr( $hostname ); ?>" />
 
-							<?php endif; ?>
+		</div>
 
-						</select>
-					</td>
-				</tr>
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>" />
+		<div>
 
-						<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress-pro-ftp' ); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>" name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
-					</td>
-				</tr>
+			<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
 
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo esc_attr( $username ); ?>" />
-					</td>
-				</tr>
+			<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
 
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo esc_attr( $pwd ); ?>" />
-					</td>
-				</tr>
+				<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
 
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>" name="<?php echo $this->get_field_name( 'folder' ); ?>" value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>" />
+				<?php if ( extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) : ?>
 
-						<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress-pro-ftp' ); ?></p>
-					</td>
-				</tr>
+					<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
 
-				<tr>
-					<th>
-						<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
-					</th>
-					<td>
-						<input type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo ( empty( $max_backups ) ? 3 : $max_backups ); ?>" />
+					<option <?php selected( $type, 'ssh2' ); ?> value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
 
-						<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
-					</td>
-				</tr>
+				<?php endif; ?>
 
-			</tbody>
-		</table>
+			</select>
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>" />
+
+			<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress-pro-ftp' ); ?></p>
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>" name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo esc_attr( $username ); ?>" />
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo esc_attr( $pwd ); ?>" />
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>" name="<?php echo $this->get_field_name( 'folder' ); ?>" value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>" />
+
+			<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress-pro-ftp' ); ?></p>
+
+		</div>
+
+		<div>
+
+			<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
+
+			<input type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo ( empty( $max_backups ) ? 3 : $max_backups ); ?>" />
+
+			<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
+
+		</div>
 
 		<input type="hidden" name="is_destination_form" value="1" />
 
