@@ -4,7 +4,7 @@ Plugin Name: BackUpWordPress To FTP
 Plugin URI: https://bwp.hmn.md/downloads/backupwordpress-to-ftp/
 Description: Send your backups to your FTP account
 Author: Human Made Limited
-Version: 1.0.4
+Version: 1.0.5
 Author URI: https://bwp.hmn.md
 license: GPLv2
 */
@@ -92,7 +92,7 @@ add_action( 'admin_init', 'hmbkpp_ftp_check' );
  * Initialize the plugin.
  */
 function hmbkpp_ftp_init() {
-	
+
 	if ( ! defined( 'HMBKP_FTP_PLUGIN_SLUG' ) ) {
 		define( 'HMBKP_FTP_PLUGIN_SLUG', plugin_basename( dirname( __FILE__ ) ) );
 	}
@@ -117,7 +117,7 @@ function hmbkpp_ftp_init() {
 	define( 'HMBKPP_FTP_ADDON_NAME', 'BackUpWordPress To FTP' ); // you should use your own CONSTANT name, and be sure to replace it throughout this file
 
 	if ( ! defined( 'HMBKP_FTP_PLUGIN_VERSION' ) ) {
-		define( 'HMBKP_FTP_PLUGIN_VERSION', '1.0.4' );
+		define( 'HMBKP_FTP_PLUGIN_VERSION', '1.0.5' );
 	}
 
 	if ( ! class_exists( 'HMBKPP_SL_Plugin_Updater' ) ) {
@@ -274,3 +274,4 @@ function hmbkpp_ftp_default_settings() {
 function hmbkpp_ftp_fetch_settings() {
 	return array_merge( hmbkpp_ftp_default_settings(), get_option( 'hmbkpp_ftp_settings', array() ) );
 }
+
