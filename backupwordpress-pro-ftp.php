@@ -4,7 +4,7 @@ Plugin Name: BackUpWordPress To FTP
 Plugin URI: https://bwp.hmn.md/downloads/backupwordpress-to-ftp/
 Description: Send your backups to your FTP account
 Author: Human Made Limited
-Version: 1.0.4
+Version: 1.0.5
 Author URI: https://bwp.hmn.md
 license: GPLv2
 */
@@ -27,98 +27,98 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/**
- * Dependency check. Only activate if BackUpWordPress is active.
- * Ref: http://wcdocs.woothemes.com/codex/extending/create-a-plugin/.
- * http://10up.com/blog/2012/10/wordpress-plug-in-self-deactivation/
- */
-
 defined( 'WPINC' ) or die;
 
-$dependency_check = class_exists( 'HMBKP_Scheduled_Backup' ) || ( function_exists( 'is_plugin_active_for_network' ) && is_plugin_active_for_network( 'backupwordpress/backupwordpress.php' ) );
+if ( ! defined( 'HMBKP_FTP_REQUIRED_PHP_VERSION' ) ) {
+	define( 'HMBKP_FTP_REQUIRED_PHP_VERSION', '5.2.4' );
+}
 
-// Only activate if BackUpWordPress is loaded
-if ( ! $dependency_check ) {
+// Don't activate on anything less than PHP required version
+if ( version_compare( phpversion(), HMBKP_FTP_REQUIRED_PHP_VERSION, '<' ) ) {
 
-	add_action( 'admin_init', 'hmbkp_ftp_deactivate' );
-	add_action( 'admin_notices', 'hmbkp_ftp_admin_notice' );
+	deactivate_plugins( plugin_basename( __FILE__ ) );
+	wp_die( sprintf( __( 'BackUpWordPress to FTP requires PHP version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_PHP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
 
-	/**
-	 * Deactivate plugin
-	 */
-	function hmbkp_ftp_deactivate() {
-		deactivate_plugins( trailingslashit( basename( dirname( __FILE__ ) ) ) . basename( __FILE__ ) );
+}
+
+/**
+ * Run checks on activation.
+ */
+function hmbkpp_ftp_activate() {
+
+	if ( ! class_exists( 'HMBKP_Scheduled_Backup' ) ) {
+
+		deactivate_plugins( plugin_basename( __FILE__ ) );
+		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress-pro-ftp' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
+
 	}
 
-	/**
-	 * BackUpWordPress Pro notice.
-	 */
-	function hmbkp_ftp_admin_notice() {
+	// Don't activate on old versions of WordPress
+	global $wp_version;
 
-		echo ( '<div class="error"><p>BackUpWordPress to FTP requires BackUpWordPress to be installed and activated. Plugin deactivated.</p></div>' );
-
-		if ( isset( $_GET['activate'] ) )
-			unset( $_GET['activate'] );
-		if ( isset( $_GET['activate-multi'] ) )
-			unset( $_GET['activate-multi'] );
+	if ( ! defined( 'HMBKP_FTP_REQUIRED_WP_VERSION' ) ) {
+		define( 'HMBKP_FTP_REQUIRED_WP_VERSION', '3.8.4' );
 	}
 
-} else {
+	if ( version_compare( $wp_version, HMBKP_FTP_REQUIRED_WP_VERSION, '<' ) ) {
 
-	if ( ! defined( 'HMBKP_FTP_REQUIRED_WP_VERSION' ) )
-		define( 'HMBKP_FTP_REQUIRED_WP_VERSION', '3.7.3' );
+		deactivate_plugins( plugin_basename( __FILE__ ) );
+		wp_die( sprintf( __( 'BackUpWordPress requires WordPress version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_WP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
 
-	if ( ! defined( 'HMBKP_FTP_REQUIRED_PHP_VERSION' ) )
-		define( 'HMBKP_FTP_REQUIRED_PHP_VERSION', '5.2.4' );
+	}
 
+}
+register_activation_hook( __FILE__, 'hmbkpp_ftp_activate' );
 
-	if ( ! defined( 'HMBKP_FTP_PLUGIN_SLUG' ) )
+/**
+ * Check dependencies.
+ */
+function hmbkpp_ftp_check() {
+
+	if ( ! class_exists( 'HMBKP_Scheduled_Backup' ) ) {
+
+		deactivate_plugins( plugin_basename( __FILE__ ) );
+		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress-pro-ftp' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
+
+	} else {
+
+		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
+		include_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
+	}
+}
+add_action( 'admin_init', 'hmbkpp_ftp_check' );
+
+/**
+ * Initialize the plugin.
+ */
+function hmbkpp_ftp_init() {
+
+	if ( ! defined( 'HMBKP_FTP_PLUGIN_SLUG' ) ) {
 		define( 'HMBKP_FTP_PLUGIN_SLUG', plugin_basename( dirname( __FILE__ ) ) );
-
-	if ( ! defined( 'HMBKP_FTP_PLUGIN_PATH' ) )
-		define( 'HMBKP_FTP_PLUGIN_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
-
-	if ( ! defined( 'HMBKP_FTP_PLUGIN_URL' ) )
-		define( 'HMBKP_FTP_PLUGIN_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
-
-
-	// Set filter for plugin's languages directory
-	if ( ! defined( 'HMBKP_FTP_PLUGIN_LANG_DIR' ) )
-		define( 'HMBKP_FTP_PLUGIN_LANG_DIR', apply_filters( 'hmbkp_ftp_filter_lang_dir', HMBKP_FTP_PLUGIN_PATH . '/languages/' ) );
-
-	register_activation_hook( __FILE__, 'hmbkp_ftp_activate' );
-
-	function hmbkp_ftp_activate() {
-
-		// Don't activate on anything less than PHP required version
-		if ( version_compare( phpversion(), HMBKP_FTP_REQUIRED_PHP_VERSION, '<' ) ) {
-			deactivate_plugins( plugin_basename( __FILE__ ) );
-			wp_die( sprintf( __( 'BackUpWordPress to FTP requires PHP version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_PHP_VERSION ),__( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
-
-		}
-
-		// Don't activate on old versions of WordPress
-		global $wp_version;
-
-		if ( version_compare( $wp_version, HMBKP_FTP_REQUIRED_WP_VERSION, '<' ) ) {
-			deactivate_plugins( plugin_basename( __FILE__ ) );
-			wp_die( sprintf( __( 'BackUpWordPress requires WordPress version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_WP_VERSION ),__( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
-
-		}
-
-		// loads the translation files
-		hmbkp_ftp_plugin_textdomain();
-
 	}
 
-// this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed
+	if ( ! defined( 'HMBKP_FTP_PLUGIN_PATH' ) ) {
+		define( 'HMBKP_FTP_PLUGIN_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
+	}
+
+	if ( ! defined( 'HMBKP_FTP_PLUGIN_URL' ) ) {
+		define( 'HMBKP_FTP_PLUGIN_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
+	}
+
+// Set filter for plugin's languages directory
+	if ( ! defined( 'HMBKP_FTP_PLUGIN_LANG_DIR' ) ) {
+		define( 'HMBKP_FTP_PLUGIN_LANG_DIR', apply_filters( 'hmbkp_ftp_filter_lang_dir', HMBKP_FTP_PLUGIN_PATH . '/languages/' ) );
+	}
+
+	// this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed
 	define( 'HMBKPP_FTP_STORE_URL', 'https://bwp.hmn.md' ); // you should use your own CONSTANT name, and be sure to replace it throughout this file
 
 // the name of your product. This should match the download name in EDD exactly
 	define( 'HMBKPP_FTP_ADDON_NAME', 'BackUpWordPress To FTP' ); // you should use your own CONSTANT name, and be sure to replace it throughout this file
 
-	if ( ! defined( 'HMBKP_FTP_PLUGIN_VERSION' ) )
-		define( 'HMBKP_FTP_PLUGIN_VERSION', '1.0.4' );
+	if ( ! defined( 'HMBKP_FTP_PLUGIN_VERSION' ) ) {
+		define( 'HMBKP_FTP_PLUGIN_VERSION', '1.0.5' );
+	}
 
 	if ( ! class_exists( 'HMBKPP_SL_Plugin_Updater' ) ) {
 		// load our custom updater
@@ -130,7 +130,7 @@ if ( ! $dependency_check ) {
 
 	$license_key = $settings['license_key'];
 
-// setup the updater
+	// setup the updater
 	$edd_updater = new HMBKPP_SL_Plugin_Updater( HMBKPP_FTP_STORE_URL, __FILE__, array(
 			'version'   => HMBKP_FTP_PLUGIN_VERSION, // current version number
 			'license'   => $license_key, // license key (used get_option above to retrieve from DB)
@@ -139,49 +139,11 @@ if ( ! $dependency_check ) {
 		)
 	);
 
-	/**
-	 * Set up plugin, load dependencies, modules and add hooks
-	 */
-	function hmbkp_ftp_plugin_setup() {
-
-		hmbkpp_ftp_admin();
-
-		// Load FTP
-		include_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
-
-		// Hook into the schedule action menu
-		if ( ! has_filter( 'hmbkp_schedule_actions_menu' ) )
-			add_filter( 'hmbkp_schedule_actions_menu', 'hmbkp_ftp_append_destination_action', 10, 2 );
-
-		// set up the ajax handler for the destination form
-		add_action( 'wp_ajax_hmbkp_ftp_edit_destination_load', 'hmbkp_ftp_edit_destination_load' );
-
-		// load plugin styles
-		add_action( 'admin_enqueue_scripts', 'hmbkp_ftp_load_scripts' );
-
-	}
-
-	add_action( 'plugins_loaded', 'hmbkp_ftp_plugin_setup' );
-
-} // end if
-
-/**
- * Sets default plugin cap level
- *
- * @return mixed|void
- */
-function hmbkp_ftp_get_manage_cap() {
-
-	static $manage_cap;
-
-	if ( ! empty ( $manage_cap ) )
-		return $manage_cap;
-
-	$manage_cap = apply_filters( 'hmbkp_ftp_manage_cap', 'manage_options' );
-
-	return $manage_cap;
+	// load plugin styles
+	add_action( 'admin_enqueue_scripts', 'hmbkp_ftp_load_scripts' );
 
 }
+add_action( 'plugins_loaded', 'hmbkpp_ftp_init' );
 
 /**
  * Loads the plugin text domain for translation
@@ -199,7 +161,7 @@ function hmbkp_ftp_plugin_textdomain() {
 	/** Set filter for WordPress languages directory */
 	$hmbkp_ftp_wp_lang_dir = apply_filters(
 		'hmbkp_ftp_filter_wp_lang_dir',
-			trailingslashit( WP_LANG_DIR ) . trailingslashit( $textdomain ) . $textdomain . '-' . $locale . '.mo'
+		trailingslashit( WP_LANG_DIR ) . trailingslashit( $textdomain ) . $textdomain . '-' . $locale . '.mo'
 	);
 
 	/** Translations: First, look in WordPress' "languages" folder = custom & update-secure! */
@@ -208,23 +170,29 @@ function hmbkp_ftp_plugin_textdomain() {
 	/** Translations: Secondly, look in plugin's "languages" folder = default */
 	load_plugin_textdomain( $textdomain, false, HMBKP_FTP_PLUGIN_LANG_DIR );
 
-} // end plugin_textdomain
+}
 
 /**
  * Append the Destinations menu item to the schedule actions menu
  *
  * @param $output
  * @param $schedule
+ *
  * @return string
  */
 function hmbkp_ftp_append_destination_action( $output, $schedule ) {
 
 	return $output .= sprintf(
 		'<a class="colorbox" href="%s">%s</a> | ',
-		add_query_arg( array( 'action' => 'hmbkp_ftp_edit_destination_load', 'hmbkp_schedule_id' => $schedule->get_id() ), admin_url( 'admin-ajax.php' ) ),
+		add_query_arg( array( 'action'            => 'hmbkp_ftp_edit_destination_load',
+		                      'hmbkp_schedule_id' => $schedule->get_id()
+			), admin_url( 'admin-ajax.php' ) ),
 		__( 'Destinations', 'backupwordpress-pro-ftp' )
 	);
 
+}
+if ( ! has_filter( 'hmbkp_schedule_actions_menu' ) ) {
+	add_filter( 'hmbkp_schedule_actions_menu', 'hmbkp_ftp_append_destination_action', 10, 2 );
 }
 
 /**
@@ -239,6 +207,7 @@ function hmbkp_ftp_edit_destination_load() {
 	die();
 
 }
+add_action( 'wp_ajax_hmbkp_ftp_edit_destination_load', 'hmbkp_ftp_edit_destination_load' );
 
 /**
  * Register and load plugin scripts
@@ -251,7 +220,7 @@ function hmbkp_ftp_load_scripts() {
 
 		wp_enqueue_script(
 			'hmbkp-ftp',
-				HMBKP_FTP_PLUGIN_URL . 'js/hmbkp-ftp.js',
+			HMBKP_FTP_PLUGIN_URL . 'js/hmbkp-ftp.js',
 			array( 'jquery' ),
 			HMBKP_FTP_PLUGIN_VERSION,
 			true
@@ -266,32 +235,20 @@ function hmbkp_ftp_load_scripts() {
 }
 
 /**
- * Include the plugin settings form
- */
-function hmbkpp_ftp_admin() {
-
-		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
-
-}
-
-/**
  * Delete the License key
  *
- * @return null
  */
 function hmbkpp_ftp_deactivate() {
 
-	if ( ! current_user_can( 'activate_plugins' ) )
+	if ( ! current_user_can( 'activate_plugins' ) ) {
 		return;
+	}
 
 	// clear license key option
 	delete_option( 'hmbkpp_ftp_license_status' );
 	delete_option( 'hmbkpp_ftp_license_key' );
 
 }
-
-// Plugin activation and deactivation
-
 register_deactivation_hook( __FILE__, 'hmbkpp_ftp_deactivate' );
 
 /**
@@ -302,7 +259,7 @@ register_deactivation_hook( __FILE__, 'hmbkpp_ftp_deactivate' );
 function hmbkpp_ftp_default_settings() {
 
 	$defaults = array(
-		'license_key' => '',
+		'license_key'    => '',
 		'license_status' => ''
 	);
 
@@ -317,3 +274,4 @@ function hmbkpp_ftp_default_settings() {
 function hmbkpp_ftp_fetch_settings() {
 	return array_merge( hmbkpp_ftp_default_settings(), get_option( 'hmbkpp_ftp_settings', array() ) );
 }
+
