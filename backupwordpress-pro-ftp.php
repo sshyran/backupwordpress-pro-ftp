@@ -82,7 +82,6 @@ function hmbkpp_ftp_check() {
 
 	} else {
 
-		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
 		include_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
 	}
 }
@@ -139,8 +138,9 @@ function hmbkpp_ftp_init() {
 		)
 	);
 
-	// load plugin styles
-	add_action( 'admin_enqueue_scripts', 'hmbkp_ftp_load_scripts' );
+	if ( is_admin() ) {
+		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
+	}
 
 }
 add_action( 'plugins_loaded', 'hmbkpp_ftp_init' );
@@ -233,6 +233,7 @@ function hmbkp_ftp_load_scripts() {
 	} // end if
 
 }
+add_action( 'admin_enqueue_scripts', 'hmbkp_ftp_load_scripts' );
 
 /**
  * Delete the License key
