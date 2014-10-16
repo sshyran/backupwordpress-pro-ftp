@@ -138,7 +138,9 @@ function hmbkpp_ftp_init() {
 	if ( is_admin() ) {
 		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
 	}
-	require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
+
+	if ( class_exists( 'HMBKP_Service' ) )
+		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
 }
 add_action( 'plugins_loaded', 'hmbkpp_ftp_init' );
 
