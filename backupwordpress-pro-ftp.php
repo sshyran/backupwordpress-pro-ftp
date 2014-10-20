@@ -244,9 +244,11 @@ function hmbkpp_ftp_deactivate() {
 		return;
 	}
 
-	// clear license key option
-	delete_option( 'hmbkpp_ftp_license_status' );
-	delete_option( 'hmbkpp_ftp_license_key' );
+	$settings = hmbkpp_ftp_fetch_settings();
+	$settings['license_status'] = '';
+	$settings['license_key'] = '';
+
+	update_option( 'hmbkpp_ftp_settings', $settings );
 
 }
 register_deactivation_hook( __FILE__, 'hmbkpp_ftp_deactivate' );
