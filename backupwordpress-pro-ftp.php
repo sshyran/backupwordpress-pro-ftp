@@ -101,7 +101,7 @@ function hmbkpp_ftp_init() {
 		define( 'HMBKP_FTP_PLUGIN_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
 	}
 
-// Set filter for plugin's languages directory
+	// Set filter for plugin's languages directory
 	if ( ! defined( 'HMBKP_FTP_PLUGIN_LANG_DIR' ) ) {
 		define( 'HMBKP_FTP_PLUGIN_LANG_DIR', apply_filters( 'hmbkp_ftp_filter_lang_dir', HMBKP_FTP_PLUGIN_PATH . '/languages/' ) );
 	}
@@ -109,7 +109,7 @@ function hmbkpp_ftp_init() {
 	// this is the URL our updater / license checker pings. This should be the URL of the site with EDD installed
 	define( 'HMBKPP_FTP_STORE_URL', 'https://bwp.hmn.md' ); // you should use your own CONSTANT name, and be sure to replace it throughout this file
 
-// the name of your product. This should match the download name in EDD exactly
+	// the name of your product. This should match the download name in EDD exactly
 	define( 'HMBKPP_FTP_ADDON_NAME', 'BackUpWordPress To FTP' ); // you should use your own CONSTANT name, and be sure to replace it throughout this file
 
 	if ( ! defined( 'HMBKP_FTP_PLUGIN_VERSION' ) ) {
@@ -117,6 +117,7 @@ function hmbkpp_ftp_init() {
 	}
 
 	if ( ! class_exists( 'HMBKPP_SL_Plugin_Updater' ) ) {
+
 		// load our custom updater
 		include( trailingslashit( dirname( __FILE__ ) ) . 'assets/edd-plugin-updater/HMBKPP-SL-Plugin-Updater.php' );
 	}
@@ -131,7 +132,7 @@ function hmbkpp_ftp_init() {
 			'version'   => HMBKP_FTP_PLUGIN_VERSION, // current version number
 			'license'   => $license_key, // license key (used get_option above to retrieve from DB)
 			'item_name' => HMBKPP_FTP_ADDON_NAME, // name of this plugin
-			'author'    => 'Human Made Limited' // author of this plugin
+			'author'    => 'Human Made Limited', // author of this plugin
 		)
 	);
 
@@ -139,8 +140,10 @@ function hmbkpp_ftp_init() {
 		require_once HMBKP_FTP_PLUGIN_PATH . 'admin/admin.php';
 	}
 
-	if ( class_exists( 'HMBKP_Service' ) )
+	if ( class_exists( 'HMBKP_Service' ) ) {
 		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
+	}
+
 }
 add_action( 'plugins_loaded', 'hmbkpp_ftp_init' );
 
@@ -170,43 +173,6 @@ function hmbkp_ftp_plugin_textdomain() {
 	load_plugin_textdomain( $textdomain, false, HMBKP_FTP_PLUGIN_LANG_DIR );
 
 }
-
-/**
- * Append the Destinations menu item to the schedule actions menu
- *
- * @param $output
- * @param $schedule
- *
- * @return string
- */
-function hmbkp_ftp_append_destination_action( $output, $schedule ) {
-
-	return $output .= sprintf(
-		'<a class="colorbox" href="%s">%s</a> | ',
-		add_query_arg( array( 'action'            => 'hmbkp_ftp_edit_destination_load',
-		                      'hmbkp_schedule_id' => $schedule->get_id()
-			), admin_url( 'admin-ajax.php' ) ),
-		__( 'Destinations', 'backupwordpress-pro-ftp' )
-	);
-
-}
-if ( ! has_filter( 'hmbkp_schedule_actions_menu' ) ) {
-	add_filter( 'hmbkp_schedule_actions_menu', 'hmbkp_ftp_append_destination_action', 10, 2 );
-}
-
-/**
- * Displays the destinations tabs in a popup
- */
-function hmbkp_ftp_edit_destination_load() {
-
-	$schedule = new HMBKP_Scheduled_Backup( sanitize_text_field( $_GET['hmbkp_schedule_id'] ) );
-
-	require 'destination-tabs.php';
-
-	die();
-
-}
-add_action( 'wp_ajax_hmbkp_ftp_edit_destination_load', 'hmbkp_ftp_edit_destination_load' );
 
 /**
  * Register and load plugin scripts
@@ -262,7 +228,7 @@ function hmbkpp_ftp_default_settings() {
 
 	$defaults = array(
 		'license_key'    => '',
-		'license_status' => ''
+		'license_status' => '',
 	);
 
 	return $defaults;
@@ -276,4 +242,3 @@ function hmbkpp_ftp_default_settings() {
 function hmbkpp_ftp_fetch_settings() {
 	return array_merge( hmbkpp_ftp_default_settings(), get_option( 'hmbkpp_ftp_settings', array() ) );
 }
-
