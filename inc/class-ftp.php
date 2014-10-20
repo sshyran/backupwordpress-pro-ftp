@@ -450,7 +450,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
 				</th>
 				<td>
-					<input type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
+					<input  class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
 
 					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
 				</td>
