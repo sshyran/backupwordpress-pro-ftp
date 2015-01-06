@@ -132,7 +132,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$backup_dir = $this->get_field_value( 'folder' );
 
 		// Build backup file path
-		$destination = trailingslashit( $backup_dir ) . pathinfo( $file, PATHINFO_BASENAME );
+		$destination = $wp_filesystem->cwd() . $backup_dir . '/' . pathinfo( $file, PATHINFO_BASENAME );
 
 		// SSH needs root directory in path, use cwd()
 		if ( 'ssh2' === $wp_filesystem->method ) {
@@ -154,24 +154,13 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			}
 		}
 
-		// Retrieve our local zip file contents
-		if ( ! $contents = file_get_contents( $file ) ) {
-
-			$message = __( 'Could not read backup file', 'backupwordpress-pro-ftp' );
-
-			$this->schedule->error( 'FTP', $message );
-
-			return;
-
-		}
-
 		// Give feedback on progress
 		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
-
+		
 		// Write the contents of the local zip backup to remote server
-		if ( ! $wp_filesystem->put_contents( $destination, $contents, FTP_BINARY ) ) {
+		if ( ! $wp_filesystem->copy( $file, $destination, true ) ) {
 
-			$message = __( 'Error writing file to remote FTP server', 'backupwordpress-pro-ftp' );
+			$message = sprintf( __( 'Error copying file %s to %s', 'backupwordpress-pro-ftp' ), $file, $destination );
 
 			$this->schedule->error( 'FTP', $message );
 
@@ -326,7 +315,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Host name    ', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
