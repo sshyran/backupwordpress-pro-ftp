@@ -27,6 +27,8 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	protected $credentials;
 
+	protected $remote_fs;
+
 	/**
 	 * Fire the FTP transfer on the hmbkp_backup_complete
 	 *
@@ -54,11 +56,10 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 				'connection_type' => $this->get_field_value( 'connection_type' )
 			);
 
-			// hook into the get_filesystem_method function to determine which one to use and avoid direct method
-			add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
+			$this->remote_fs = new WP_Filesystem_FTPext( $this->credentials );
 
 			// attempt a connection
-			if ( WP_Filesystem( $this->credentials ) ) {
+			if ( $this->remote_fs ) {
 				$this->do_backup( $file );
 			} else {
 				$this->schedule->error( 'FTP', __( 'Unable to transfer the backup with the current settings', 'backupwordpress-pro-ftp' ) );
@@ -132,7 +133,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$backup_dir = $this->get_field_value( 'folder' );
 
 		// Build backup file path
-		$destination = $wp_filesystem->cwd() . $backup_dir . '/' . pathinfo( $file, PATHINFO_BASENAME );
+		$destination = $this->remote_fs->cwd() . $backup_dir . '/' . pathinfo( $file, PATHINFO_BASENAME );
 
 		// SSH needs root directory in path, use cwd()
 		if ( 'ssh2' === $wp_filesystem->method ) {
@@ -141,9 +142,9 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		}
 
 		// Attempt to create the remote folder where backup file will be stored
-		if ( ! $wp_filesystem->exists( $backup_dir ) ) {
+		if ( ! $this->remote_fs->exists( $backup_dir ) ) {
 
-			if ( ! $wp_filesystem->mkdir( $backup_dir ) ) {
+			if ( ! $this->remote_fs->mkdir( $backup_dir ) ) {
 
 				$message = sprintf( __( 'Could not create directory %s', 'backupwordpress-pro-ftp' ), '/' . trailingslashit( $backup_dir ) );
 
@@ -156,9 +157,11 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		// Give feedback on progress
 		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
-		
+
+		$local = $wp_filesystem->get_contents( $file );
+
 		// Write the contents of the local zip backup to remote server
-		if ( ! $wp_filesystem->copy( $file, $destination, true ) ) {
+		if ( ! $this->remote_fs->put_contents( $destination, $local ) ) {
 
 			$message = sprintf( __( 'Error copying file %s to %s', 'backupwordpress-pro-ftp' ), $file, $destination );
 
@@ -299,13 +302,16 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<input id="<?php echo $this->get_field_name( 'FTP' ); ?>" type="checkbox" <?php checked( $this->get_field_value( 'FTP' ) ); ?> name="<?php echo $this->get_field_name( 'FTP' ); ?>" value="1"/>
+					<input id="<?php echo $this->get_field_name( 'FTP' ); ?>"
+					       type="checkbox" <?php checked( $this->get_field_value( 'FTP' ) ); ?>
+					       name="<?php echo $this->get_field_name( 'FTP' ); ?>" value="1"/>
 
 				</td>
 
@@ -315,13 +321,16 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Host name    ', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Host name    ', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo esc_attr( $hostname ); ?>"/>
+					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>"
+					       name="<?php echo $this->get_field_name( 'hostname' ); ?>"
+					       value="<?php echo esc_attr( $hostname ); ?>"/>
 
 				</td>
 
@@ -331,21 +340,26 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
+					<select name="HMBKP_FTP_Backup_Service[connection_type]"
+					        id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
 
-						<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
+						<option <?php selected( $type, 'ftp' ); ?>
+							value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
 
 						<?php if ( extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) : ?>
 
-							<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
+							<option <?php selected( $type, 'sftp' ); ?>
+								value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
 
-							<option <?php selected( $type, 'ssh2' ); ?> value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
+							<option <?php selected( $type, 'ssh2' ); ?>
+								value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
 
 						<?php endif; ?>
 
@@ -359,13 +373,16 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>"/>
+					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>"
+					       name="<?php echo $this->get_field_name( 'port' ); ?>"
+					       value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>"/>
 
 					<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress-pro-ftp' ); ?></p>
 
@@ -377,12 +394,14 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
 				</th>
 
 				<td>
 
-					<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>" name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
+					<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>"
+					       name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
 				</td>
 
 			</tr>
@@ -390,29 +409,16 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			<tr>
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo esc_attr( $username ); ?>"/>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo esc_attr( $pwd ); ?>"/>
+					<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>"
+					       name="<?php echo $this->get_field_name( 'username' ); ?>"
+					       value="<?php echo esc_attr( $username ); ?>"/>
 
 				</td>
 
@@ -422,13 +428,35 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>" name="<?php echo $this->get_field_name( 'folder' ); ?>" value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>"/>
+					<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>"
+					       name="<?php echo $this->get_field_name( 'password' ); ?>"
+					       value="<?php echo esc_attr( $pwd ); ?>"/>
+
+				</td>
+
+			</tr>
+
+			<tr>
+
+				<th scope="row">
+
+					<label
+						for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
+
+				</th>
+
+				<td>
+
+					<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>"
+					       name="<?php echo $this->get_field_name( 'folder' ); ?>"
+					       value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>"/>
 
 					<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress-pro-ftp' ); ?></p>
 				</td>
@@ -436,10 +464,14 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 			<tr>
 				<th scope="row">
-					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
+					<label
+						for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
 				</th>
 				<td>
-					<input  class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
+					<input class="small-text" type="number" min="1" step="1"
+					       id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"
+					       name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"
+					       value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
 
 					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
 				</td>
