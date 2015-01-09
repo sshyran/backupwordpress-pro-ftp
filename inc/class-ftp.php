@@ -171,7 +171,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$contents = '';
 		while ( ! feof($handle) ) {
 			$contents .= fread($handle, $buffer);
-			//flush();
+			flush();
 		}
 		
 		fclose($handle);
