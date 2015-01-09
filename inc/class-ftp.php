@@ -126,9 +126,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public function do_backup( $file ) {
 
-		// Give feedback on progress
-		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
-
 		global $wp_filesystem;
 
 		// Get the backup folder location from user settings
@@ -158,26 +155,21 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		}
 
 		// Retrieve our local zip file contents
-		if ( ! $handle = fopen( $file, 'r' ) ) {
+		if ( ! $contents = file_get_contents( $file ) ) {
 
-			$message = sprintf( __( 'Could not read backup file %s', 'backupwordpress-pro-ftp' ), $file );
+			$message = __( 'Could not read backup file', 'backupwordpress-pro-ftp' );
 
 			$this->schedule->error( 'FTP', $message );
 
 			return;
 
 		}
-		$buffer = 10 * 1024 * 1024; // 10 MB buffer
-		$contents = '';
-		while ( ! feof($handle) ) {
-			$contents .= fread($handle, $buffer);
-			flush();
-		}
-		
-		fclose($handle);
+
+		// Give feedback on progress
+		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
 
 		// Write the contents of the local zip backup to remote server
-		if ( ! $wp_filesystem->put_contents( $destination, $contents ) ) {
+		if ( ! $wp_filesystem->put_contents( $destination, $contents, FTP_BINARY ) ) {
 
 			$message = __( 'Error writing file to remote FTP server', 'backupwordpress-pro-ftp' );
 
