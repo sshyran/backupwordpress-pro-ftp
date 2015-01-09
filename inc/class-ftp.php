@@ -126,6 +126,9 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public function do_backup( $file ) {
 
+		// Give feedback on progress
+		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
+
 		global $wp_filesystem;
 
 		// Get the backup folder location from user settings
@@ -164,15 +167,14 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			return;
 
 		}
-		$buffer = 1024 * 1024;
+		$buffer = 10 * 1024 * 1024; // 10 MB buffer
+		$contents = '';
 		while ( ! feof($handle) ) {
-			$contents = fread($handle, $buffer);
-			flush();
+			$contents .= fread($handle, $buffer);
+			//flush();
 		}
-
+		
 		fclose($handle);
-		// Give feedback on progress
-		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
 
 		// Write the contents of the local zip backup to remote server
 		if ( ! $wp_filesystem->put_contents( $destination, $contents ) ) {
@@ -456,7 +458,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
 				</th>
 				<td>
-					<input class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
+					<input  class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
 
 					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
 				</td>
