@@ -38,7 +38,7 @@ if ( ! defined( 'HMBKP_FTP_REQUIRED_PHP_VERSION' ) ) {
 if ( version_compare( phpversion(), HMBKP_FTP_REQUIRED_PHP_VERSION, '<' ) ) {
 
 	deactivate_plugins( plugin_basename( __FILE__ ) );
-	wp_die( sprintf( __( 'BackUpWordPress to FTP requires PHP version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_PHP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
+	wp_die( sprintf( __( 'BackUpWordPress to FTP requires PHP version %s or greater.', 'backupwordpress' ), HMBKP_FTP_REQUIRED_PHP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress' ), array( 'back_link' => true ) );
 
 }
 
@@ -50,7 +50,7 @@ function hmbkpp_ftp_activate() {
 	if ( ! class_exists( 'HMBKP_Scheduled_Backup' ) ) {
 
 		deactivate_plugins( plugin_basename( __FILE__ ) );
-		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress-pro-ftp' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
+		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
 
 	}
 
@@ -64,7 +64,7 @@ function hmbkpp_ftp_activate() {
 	if ( version_compare( $wp_version, HMBKP_FTP_REQUIRED_WP_VERSION, '<' ) ) {
 
 		deactivate_plugins( plugin_basename( __FILE__ ) );
-		wp_die( sprintf( __( 'BackUpWordPress requires WordPress version %s or greater.', 'backupwordpress-pro-ftp' ), HMBKP_FTP_REQUIRED_WP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress-pro-ftp' ), array( 'back_link' => true ) );
+		wp_die( sprintf( __( 'BackUpWordPress requires WordPress version %s or greater.', 'backupwordpress' ), HMBKP_FTP_REQUIRED_WP_VERSION ), __( 'BackUpWordPress to FTP', 'backupwordpress' ), array( 'back_link' => true ) );
 
 	}
 
@@ -79,7 +79,7 @@ function hmbkpp_ftp_check() {
 	if ( ! class_exists( 'HMBKP_Scheduled_Backup' ) ) {
 
 		deactivate_plugins( plugin_basename( __FILE__ ) );
-		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress-pro-ftp' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
+		wp_die( __( 'BackUpWordPress To FTP requires BackUpWordPress to be activated. It has been deactivated.', 'backupwordpress' ), 'BackUpWordPress to FTP', array( 'back_link' => true ) );
 
 	}
 }
@@ -142,7 +142,7 @@ function hmbkpp_ftp_init() {
 	}
 
 	if ( class_exists( 'HMBKP_Service' ) ) {
-		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
+		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-transfer.php';
 	}
 
 }
@@ -151,12 +151,12 @@ add_action( 'plugins_loaded', 'hmbkpp_ftp_init' );
 /**
  * Loads the plugin text domain for translation
  * This setup allows a user to just drop his custom translation files into the WordPress language directory
- * Files will need to be in a subdirectory with the name of the textdomain 'backupwordpress-pro-ftp'
+ * Files will need to be in a subdirectory with the name of the textdomain 'backupwordpress'
  */
 function hmbkp_ftp_plugin_textdomain() {
 
 	/** Set unique textdomain string */
-	$textdomain = 'backupwordpress-pro-ftp';
+	$textdomain = 'backupwordpress';
 
 	/** The 'plugin_locale' filter is also used by default in load_plugin_textdomain() */
 	$locale = apply_filters( 'plugin_locale', get_locale(), $textdomain );
