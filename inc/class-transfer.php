@@ -3,6 +3,8 @@
 defined( 'WPINC' ) or die;
 
 require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-encryption.php';
+require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
+require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-sftp.php';
 
 /**
  * Class HMBKP_FTP_Backup_Service
@@ -16,16 +18,12 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	public $name = 'FTP';
 
 	/**
-	 * Whether to show this service in the tabbed interface of destinations
-	 * @var boolean
-	 */
-	public $is_tab_visible = true;
-
-	/**
 	 * FTP credentials
 	 * @var Array
 	 */
 	protected $credentials;
+
+	protected $connection;
 
 	/**
 	 * Fire the FTP transfer on the hmbkp_backup_complete
@@ -38,85 +36,40 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public function action( $action ) {
 
-		// it seems WP_Filesystem isn't loaded for Cron jobs
-		require_once( ABSPATH . 'wp-admin/includes/file.php' );
-
 		if ( ( 'hmbkp_backup_complete' === $action ) && $this->get_field_value( 'FTP' ) ) {
 
 			$file = $this->schedule->get_archive_filepath();
 
 			$this->credentials = array(
-				'hostname'        => $this->get_field_value( 'hostname' ),
+				'host'        => $this->get_field_value( 'hostname' ),
 				'username'        => $this->get_field_value( 'username' ),
 				'password'        => HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) ),
 				'port'            => (int) $this->get_field_value( 'port' ),
-				'ssl'             => $this->get_field_value( 'ssl' ),
-				'connection_type' => $this->get_field_value( 'connection_type' )
+				'path' => $this->get_field_value( 'folder' ),
+				//'ssl'             => $this->get_field_value( 'ssl' ),
 			);
 
-			// hook into the get_filesystem_method function to determine which one to use and avoid direct method
-			add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
+			switch ( $this->get_field_value( 'connection_type' ) ) {
+				case 'ftp':
+					$this->connection = new HMBKP_FTP( $this->credentials );
+					break;
+				case 'sftp':
+					$this->connection = new HMBKP_SFTP( $this->credentials );
+					break;
+			}
 
-			// attempt a connection
-			if ( WP_Filesystem( $this->credentials ) ) {
+			// Give feedback on progress
+			$this->schedule->set_status( sprintf( __( 'Test we can connect', 'backupwordpress' ), $this->credentials['host'] ) );
+
+			$result = $this->connection->test_options( $this->credentials );
+
+			if ( is_wp_error( $result ) ) {
+				$this->schedule->error( 'FTP', sprintf( __( 'Line 67 An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			} else {
 				$this->do_backup( $file );
-			} else {
-				$this->schedule->error( 'FTP', __( 'Unable to transfer the backup with the current settings', 'backupwordpress-pro-ftp' ) );
 			}
+
 		}
-	}
-
-	/**
-	 * Determine appropriate filesystem connection method
-	 *
-	 * @param $method
-	 * @param $args credentials and connection settings
-	 *
-	 * @return string Connection method
-	 */
-	public function change_method( $method, $args ) {
-
-		// if method wasn't set in the wp-config
-		if ( defined( 'HMBKP_FS_METHOD' ) && in_array( HMBKP_FS_METHOD, array( 'ssh2', 'ftpext', 'ftpsockets' ) ) ) {
-
-			$method = HMBKP_FS_METHOD;
-
-		} elseif ( 'direct' == $method ) {
-
-			// determine FTP method
-			if ( 'ftp' === $args['connection_type'] && extension_loaded( 'ftp' ) ) {
-				$method = 'ftpext';
-
-			} elseif ( 'ftp' === $args['connection_type'] && ( extension_loaded( 'sockets' ) || function_exists( 'fsockopen' ) ) ) {
-				$method = 'ftpsockets';
-
-			} elseif ( 'sftp' === $args['connection_type'] && extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) {
-				$method = 'ssh2';
-
-			} else {
-				$method = '';
-			}
-		}
-
-		return $method;
-	}
-
-	/**
-	 * Returns the current working directory on the remote server.
-	 * @return string
-	 */
-	private function get_cwd() {
-
-		global $wp_filesystem;
-
-		$cwd = trim( untrailingslashit( $wp_filesystem->cwd() ) );
-
-		if ( $wp_filesystem->is_dir( $cwd ) ) {
-			return trailingslashit( $cwd );
-		}
-
-		return '';
-
 	}
 
 	/**
@@ -127,66 +80,12 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	public function do_backup( $file ) {
 
 		// Give feedback on progress
-		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
+		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress' ), $this->credentials['host'] ) );
 
-		global $wp_filesystem;
+		$result = $this->connection->upload( $file, pathinfo( $file, PATHINFO_BASENAME ) );
 
-		// Get the backup folder location from user settings
-		$backup_dir = $this->get_field_value( 'folder' );
-
-		// Build backup file path
-		$destination = trailingslashit( $backup_dir ) . pathinfo( $file, PATHINFO_BASENAME );
-
-		// SSH needs root directory in path, use cwd()
-		if ( 'ssh2' === $wp_filesystem->method ) {
-			$backup_dir  = $this->get_cwd() . $backup_dir;
-			$destination = $this->get_cwd() . $destination;
-		}
-
-		// Attempt to create the remote folder where backup file will be stored
-		if ( ! $wp_filesystem->exists( $backup_dir ) ) {
-
-			if ( ! $wp_filesystem->mkdir( $backup_dir ) ) {
-
-				$message = sprintf( __( 'Could not create directory %s', 'backupwordpress-pro-ftp' ), '/' . trailingslashit( $backup_dir ) );
-
-				$this->schedule->error( 'FTP', $message );
-
-				return;
-
-			}
-		}
-
-		// Retrieve our local zip file contents
-		if ( ! $handle = fopen( $file, 'r' ) ) {
-
-			$message = sprintf( __( 'Could not read backup file %s', 'backupwordpress-pro-ftp' ), $file );
-
-			$this->schedule->error( 'FTP', $message );
-
-			return;
-
-		}
-		$buffer = 10 * 1024 * 1024; // 10 MB buffer
-		$contents = '';
-		while ( ! feof($handle) ) {
-			$contents .= fread($handle, $buffer);
-			flush();
-		}
-		
-		fclose($handle);
-
-		// Write the contents of the local zip backup to remote server
-		if ( ! $wp_filesystem->put_contents( $destination, $contents ) ) {
-
-			$message = __( 'Error writing file to remote FTP server', 'backupwordpress-pro-ftp' );
-
-			$this->schedule->error( 'FTP', $message );
-
-			return;
-
-		} else {
-			$this->delete_old_backups();
+		if ( is_wp_error( $result ) ) {
+			$this->schedule->error( 'FTP', sprintf( __( 'Line 88 An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 		}
 
 	}
@@ -197,11 +96,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	protected function delete_old_backups() {
 
-		global $wp_filesystem;
-
-		// hook into the get_filesystem_method function to determine which one to use and avoid direct method
-		add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
-
 		// get max backups number
 		$max_backups = absint( $this->get_field_value( 'ftp_max_backups' ) );
 
@@ -209,7 +103,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$backup_dir = $this->get_field_value( 'folder' );
 
 		// get list of existing remote backups
-		$response = wp_list_pluck( $wp_filesystem->dirlist( $backup_dir ), 'name' );
+		$response = $this->connection->dir_file_list( $backup_dir );
 
 		$backup_files = array_filter( $response, array( $this, 'filter_files' ) );
 
@@ -221,10 +115,11 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		$files_to_delete = array_slice( $backup_files, $max_backups );
 
-		// @TODO : actually delete the files!
 		foreach ( $files_to_delete as $filename ) {
-			$filetest = $this->get_cwd() . trailingslashit( $backup_dir ) . $filename;
+			$this->connection->delete( $filename );
 		}
+
+
 
 	}
 
@@ -318,7 +213,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -334,7 +229,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -350,7 +245,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -358,13 +253,11 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 					<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
 
-						<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
+						<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress' ); ?></option>
 
 						<?php if ( extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) : ?>
 
-							<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
-
-							<option <?php selected( $type, 'ssh2' ); ?> value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
+							<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress' ); ?></option>
 
 						<?php endif; ?>
 
@@ -378,7 +271,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -386,7 +279,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>"/>
 
-					<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress-pro-ftp' ); ?></p>
+					<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress' ); ?></p>
 
 				</td>
 
@@ -396,20 +289,15 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress' ); ?></label>
 				</th>
 
-				<td>
-
-					<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>" name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
-				</td>
-
 			</tr>
 
 			<tr>
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -425,7 +313,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -441,7 +329,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress' ); ?></label>
 
 				</th>
 
@@ -449,18 +337,18 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 					<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>" name="<?php echo $this->get_field_name( 'folder' ); ?>" value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>"/>
 
-					<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress-pro-ftp' ); ?></p>
+					<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress' ); ?></p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress' ); ?></label>
 				</th>
 				<td>
 					<input  class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
 
-					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
+					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress' ); ?></p>
 				</td>
 			</tr>
 
@@ -515,8 +403,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public function update( &$new_data, $old_data ) {
 
-		global $wp_filesystem;
-
 		$errors = array();
 
 		if ( ! isset( $new_data['FTP'] ) ) {
@@ -525,19 +411,19 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		if ( isset( $new_data['hostname'] ) ) {
 			if ( empty( $new_data['hostname'] ) ) {
-				$errors['hostname'] = __( 'Please provide a valid hostname', 'backupwordpress-pro-ftp' );
+				$errors['hostname'] = __( 'Please provide a valid hostname', 'backupwordpress' );
 			}
 		}
 
 		if ( isset( $new_data['port'] ) ) {
 			if ( empty( $new_data['port'] ) ) {
-				$errors['port'] = __( 'Please provide a valid port number', 'backupwordpress-pro-ftp' );
+				$errors['port'] = __( 'Please provide a valid port number', 'backupwordpress' );
 			}
 		}
 
 		if ( isset( $new_data['connection_type'] ) ) {
 			if ( empty( $new_data['connection_type'] ) ) {
-				$errors['connection_type'] = __( 'Please provide a valid connection type', 'backupwordpress-pro-ftp' );
+				$errors['connection_type'] = __( 'Please provide a valid connection type', 'backupwordpress' );
 			}
 		}
 
@@ -547,51 +433,63 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		if ( isset( $new_data['username'] ) ) {
 			if ( empty( $new_data['username'] ) ) {
-				$errors['username'] = __( 'Please provide a valid username', 'backupwordpress-pro-ftp' );
+				$errors['username'] = __( 'Please provide a valid username', 'backupwordpress' );
 			}
 		}
 
 		if ( isset( $new_data['password'] ) ) {
 
 			if ( empty( $new_data['password'] ) ) {
-				$errors['password'] = __( 'Please provide a valid password', 'backupwordpress-pro-ftp' );
+				$errors['password'] = __( 'Please provide a valid password', 'backupwordpress' );
 			} else {
+				$test_pw = $new_data['password'];
 				$new_data['password'] = HMBKP_Encryption::encrypt( $new_data['password'] );
 			}
 		}
 
 		if ( isset( $new_data['folder'] ) ) {
 			if ( empty( $new_data['folder'] ) ) {
-				$errors['folder'] = __( 'Please provide a valid folder path', 'backupwordpress-pro-ftp' );
+				$errors['folder'] = __( 'Please provide a valid folder path', 'backupwordpress' );
 			}
 		}
 
 		if ( isset( $new_data['ftp_max_backups'] ) ) {
 			if ( empty( $new_data['ftp_max_backups'] ) || ! ctype_digit( $new_data['ftp_max_backups'] ) ) {
-				$errors['ftp_max_backups'] = __( 'Max backups must be a number', 'backupwordpress-pro-ftp' );
+				$errors['ftp_max_backups'] = __( 'Max backups must be a number', 'backupwordpress' );
 			}
 		}
 
-		$credentials             = $new_data;
-		$credentials['password'] = HMBKP_Encryption::decrypt( $new_data['password'] );
+		if ( empty ( $errors ) ) {
+			$this->credentials = array(
+				'host'        => $new_data['hostname'],
+				'username'        => $new_data['username'],
+				'password'        => $test_pw,
+				'port'            => (int) $new_data['port'],
+				'path' => $this->get_field_value( 'folder' ),
+				//'ssl'             => $new_data['ssl'],
+			);
 
-		// Hook into the get_filesystem_method function to determine which one to use and avoid direct method
-		if ( ! has_filter( 'filesystem_method', array( $this, 'change_method' ) ) ) {
-			add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
+			switch ( $this->get_field_value( 'connection_type' ) ) {
+				case 'ftp':
+					$this->connection = new HMBKP_FTP( $this->credentials );
+					break;
+				case 'sftp':
+					$this->connection = new HMBKP_SFTP( $this->credentials );
+					break;
+				default:
+					// throw an error
+					break;
+			}
+
+			$result = $this->connection->test_options( $this->credentials );
+
+			if ( is_wp_error( $result ) ) {
+				$this->schedule->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			}
+
+			return $errors;
+
 		}
-
-		if ( empty( $errors ) && ! WP_Filesystem( $credentials ) ) {
-
-			$fs_errors = $wp_filesystem->errors->get_error_messages();
-
-			$message = implode( ' ', $fs_errors );
-
-			$errors['hostname'] = $message;
-
-		}
-
-		return $errors;
-
 	}
 
 	/**
@@ -601,7 +499,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	public function display() {
 
 		if ( $this->is_service_active() ) {
-			return sprintf( __( '%1$s %2$s', 'backupwordpress-pro-ftp' ), $this->name, $this->get_field_value( 'hostname' ) );
+			return sprintf( __( '%1$s %2$s', 'backupwordpress' ), $this->name, $this->get_field_value( 'hostname' ) );
 		}
 
 	}
@@ -639,7 +537,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-requirements.php'; ?>
 
-		<h3><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></h3>
+		<h3><?php _e( 'FTP', 'backupwordpress' ); ?></h3>
 
 		<table class="fixed widefat">
 
