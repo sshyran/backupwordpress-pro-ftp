@@ -27,7 +27,7 @@ function hmbkpp_ftp_display_license_form() { ?>
 
 				<?php
 				printf(
-					__( '%1$sBackUpWordPress to FTP is almost ready%2$s, %3$senter your License Key to continue%4$s', 'backupwordpress-pro-ftp' ),
+					__( '%1$sBackUpWordPress to FTP is almost ready%2$s, %3$senter your License Key to continue%4$s', 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
 					'<label style="vertical-align: baseline;" for="hmbkpp_ftp_license_key">',
@@ -39,7 +39,7 @@ function hmbkpp_ftp_display_license_form() { ?>
 
 				<input type="hidden" name="hmbkpp_ftp_settings[hmbkpp-ftp-settings-updated]" value="1" />
 
-				<input class="button-primary" type="submit" value="<?php _e( 'Save License Key', 'backupwordpress-pro-ftp' ); ?>" />
+				<input class="button-primary" type="submit" value="<?php _e( 'Save License Key', 'backupwordpress' ); ?>" />
 
 			</p>
 
@@ -47,7 +47,7 @@ function hmbkpp_ftp_display_license_form() { ?>
 
 				<?php
 				printf(
-					__( '%1$sDon\'t have a BackUpWordPress to FTP License Key?%2$s %3$sPurchase one now%4$s and then report back here', 'backupwordpress-pro-ftp' ),
+					__( '%1$sDon\'t have a BackUpWordPress to FTP License Key?%2$s %3$sPurchase one now%4$s and then report back here', 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
 					'<a href="' . esc_url( 'https://bwp.hmn.md' ) . '" target="_blank">',
@@ -79,7 +79,7 @@ function hmbkpp_ftp_license_validity_notice( $license_status ) { ?>
 			<?php
 			if ( 'valid' == $license_status ) {
 				printf(
-					__( '%1$sBackUpWordPress to FTP License Key successfully added%2$s, go back to %3$sthe backups admin page%4$s' , 'backupwordpress-pro-ftp' ),
+					__( '%1$sBackUpWordPress to FTP License Key successfully added%2$s, go back to %3$sthe backups admin page%4$s' , 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
 					'<a href="tools.php?page=' . esc_attr( HMBKP_PLUGIN_SLUG ) . '">',
@@ -89,7 +89,7 @@ function hmbkpp_ftp_license_validity_notice( $license_status ) { ?>
 				delete_option( 'hmbkpp_ftp_settings' );
 				deactivate_plugins( 'backupwordpress-pro-ftp/backupwordpress-pro-ftp.php' );
 				printf(
-					__( '%1$sBackUpWordPress to FTP License Key is invalid%2$s, plugin will be deactivated' , 'backupwordpress-pro-ftp' ),
+					__( '%1$sBackUpWordPress to FTP License Key is invalid%2$s, plugin will be deactivated' , 'backupwordpress' ),
 					'<strong>',
 					'</strong>'
 				);
