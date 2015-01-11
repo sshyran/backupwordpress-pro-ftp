@@ -2,9 +2,9 @@
 
 defined( 'WPINC' ) or die;
 
-require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-encryption.php';
-require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-ftp.php';
-require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-sftp.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-encryption.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-ftp.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-sftp.php';
 
 /**
  * Class HMBKP_FTP_Backup_Service
@@ -44,9 +44,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 				'host'        => $this->get_field_value( 'hostname' ),
 				'username'        => $this->get_field_value( 'username' ),
 				'password'        => HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) ),
-				'port'            => (int) $this->get_field_value( 'port' ),
 				'path' => $this->get_field_value( 'folder' ),
-				//'ssl'             => $this->get_field_value( 'ssl' ),
 			);
 
 			switch ( $this->get_field_value( 'connection_type' ) ) {
@@ -169,18 +167,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			$type = 'ftp';
 		}
 
-		$port = $this->get_field_value( 'port' );
-
-		if ( empty( $port ) && ( isset( $options['port'] ) ) ) {
-			$port = $options['port'];
-		}
-
-		$ssl = $this->get_field_value( 'ssl' );
-
-		if ( empty( $ssl ) && ( isset( $options['ssl'] ) ) ) {
-			$port = $options['ssl'];
-		}
-
 		$username = $this->get_field_value( 'username' );
 
 		if ( empty( $username ) && ( isset( $options['username'] ) ) ) {
@@ -267,32 +253,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 			</tr>
 
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>"/>
-
-					<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress' ); ?></p>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress' ); ?></label>
-				</th>
-
-			</tr>
 
 			<tr>
 				<th scope="row">
@@ -464,7 +424,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 				'host'        => $new_data['hostname'],
 				'username'        => $new_data['username'],
 				'password'        => $test_pw,
-				'port'            => (int) $new_data['port'],
 				'path' => $this->get_field_value( 'folder' ),
 				//'ssl'             => $new_data['ssl'],
 			);
@@ -519,7 +478,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public static function intercom_data() {
 
-		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-requirements.php';
+		require_once plugin_dir_path( __FILE__ ) . 'class-requirements.php';
 
 		$info = array();
 
@@ -535,7 +494,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 */
 	public static function intercom_data_html() {
 
-		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-requirements.php'; ?>
+		require_once plugin_dir_path( __FILE__ ) . 'class-requirements.php'; ?>
 
 		<h3><?php _e( 'FTP', 'backupwordpress' ); ?></h3>
 

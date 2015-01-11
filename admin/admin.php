@@ -102,7 +102,8 @@ function hmbkpp_ftp_license_validity_notice( $license_status ) { ?>
 
 function hmbkpp_ftp_add_api_key_admin_notice() {
 
-	$settings = hmbkpp_ftp_fetch_settings();
+	$plugin = BackUpWordPress_FTP::get_instance();
+	$settings = $plugin->fetch_settings();
 
 	if ( 'valid' == $settings['license_status'] )
 		return;
@@ -118,7 +119,8 @@ function hmbkpp_ftp_add_api_key_admin_notice() {
 		hmbkpp_ftp_activate_license();
 
 		// Settings have changed
-		$settings = hmbkpp_ftp_fetch_settings();
+		$plugin = BackUpWordPress_FTP::get_instance();
+		$settings = $plugin->fetch_settings();
 
 		hmbkpp_ftp_license_validity_notice( $settings['license_status'] );
 
@@ -137,7 +139,8 @@ add_action( 'admin_notices', 'hmbkpp_ftp_add_api_key_admin_notice' );
 function hmbkpp_ftp_activate_license() {
 
 	// retrieve the license from the database
-	$settings = hmbkpp_ftp_fetch_settings();
+	$plugin = BackUpWordPress_FTP::get_instance();
+	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
 	// data to send in our API request
@@ -172,7 +175,8 @@ function hmbkpp_ftp_activate_license() {
 function hmbkpp_ftp_deactivate_license() {
 
 	// retrieve the license from the database
-	$settings = hmbkpp_ftp_fetch_settings();
+	$plugin = BackUpWordPress_FTP::get_instance();
+	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
 	// data to send in our API request
@@ -192,7 +196,8 @@ function hmbkpp_ftp_deactivate_license() {
 	// decode the license data
 	$license_data = json_decode( wp_remote_retrieve_body( $response ) );
 
-	$settings = hmbkpp_ftp_fetch_settings();
+	$plugin = BackUpWordPress_FTP::get_instance();
+	$settings = $plugin->fetch_settings();
 
 	// $license_data->license will be either "deactivated" or "failed"
 	if ( $license_data->license == 'deactivated' ) {
@@ -215,7 +220,8 @@ function hmbkpp_ftp_check_license() {
 
 	global $wp_version;
 
-	$settings = hmbkpp_ftp_fetch_settings();
+	$plugin = BackUpWordPress_FTP::get_instance();
+	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
 	$api_params = array(
