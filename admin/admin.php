@@ -82,7 +82,7 @@ function hmbkpp_ftp_license_validity_notice( $license_status ) { ?>
 					__( '%1$sBackUpWordPress to FTP License Key successfully added%2$s, go back to %3$sthe backups admin page%4$s' , 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
-					'<a href="tools.php?page=' . esc_attr( HMBKP_PLUGIN_SLUG ) . '">',
+					'<a href="' . esc_attr( HMBKP_ADMIN_URL ) . '">',
 					'</a>'
 				);
 			} else {
@@ -147,11 +147,11 @@ function hmbkpp_ftp_activate_license() {
 	$api_params = array(
 		'edd_action'=> 'activate_license',
 		'license' 	=> $license,
-		'item_name' => urlencode( HMBKPP_FTP_ADDON_NAME ) // the name of our product in EDD
+		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, HMBKPP_FTP_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	// make sure the response came back okay
 	if ( is_wp_error( $response ) )
@@ -183,11 +183,11 @@ function hmbkpp_ftp_deactivate_license() {
 	$api_params = array(
 		'edd_action'=> 'deactivate_license',
 		'license' 	=> $license,
-		'item_name' => urlencode( HMBKPP_FTP_ADDON_NAME ) // the name of our product in EDD
+		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, HMBKPP_FTP_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	// make sure the response came back okay
 	if ( is_wp_error( $response ) )
@@ -227,11 +227,11 @@ function hmbkpp_ftp_check_license() {
 	$api_params = array(
 		'edd_action' => 'check_license',
 		'license' => $license,
-		'item_name' => urlencode( HMBKPP_FTP_ADDON_NAME )
+		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME )
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, HMBKPP_FTP_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	if ( is_wp_error( $response ) )
 		return false;
