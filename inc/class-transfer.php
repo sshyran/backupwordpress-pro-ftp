@@ -56,17 +56,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 					break;
 			}
 
-			// Give feedback on progress
-			$this->schedule->set_status( sprintf( __( 'Test we can connect', 'backupwordpress' ), $this->credentials['host'] ) );
-
-			$result = $this->connection->test_options( $this->credentials );
-
-			if ( is_wp_error( $result ) ) {
-				$this->schedule->error( 'FTP', sprintf( __( 'Line 67 An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
-			} else {
-				$this->do_backup( $file );
-			}
-
+			$this->do_backup( $file );
 		}
 	}
 
@@ -83,7 +73,9 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$result = $this->connection->upload( $file, pathinfo( $file, PATHINFO_BASENAME ) );
 
 		if ( is_wp_error( $result ) ) {
-			$this->schedule->error( 'FTP', sprintf( __( 'Line 88 An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			$this->schedule->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+		} else {
+			$this->delete_old_backups();
 		}
 
 	}
@@ -101,7 +93,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$backup_dir = $this->get_field_value( 'folder' );
 
 		// get list of existing remote backups
-		$response = $this->connection->dir_file_list( $backup_dir );
+		$response = $this->connection->dir_file_list();
 
 		$backup_files = array_filter( $response, array( $this, 'filter_files' ) );
 
@@ -116,8 +108,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		foreach ( $files_to_delete as $filename ) {
 			$this->connection->delete( $filename );
 		}
-
-
 
 	}
 

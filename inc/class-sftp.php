@@ -31,7 +31,7 @@ class HMBKP_SFTP {
 	 */
 	public function upload( $file_path, $destination, $size = 0 ) {
 
-		$logged_in_status = $this->login( $this->options['username'], $this->options['password'] );
+		$logged_in_status = $this->login();
 
 		if ( is_wp_error( $logged_in_status ) ) {
 			return $logged_in_status;
@@ -101,11 +101,25 @@ class HMBKP_SFTP {
 
 	}
 
-	public function login( $username, $password ) {
+	public function login() {
 
-		if ( ! $this->connection->login( $username, $password ) ) {
-			return new WP_Error( 'sftp-login-error', sprintf( 'Could not login with username %s and provided password', $username ) );
+		$this->connect( $this->options['host'] );
+
+		if ( ! ( $this->connection instanceof Net_SFTP ) ) {
+			return new WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $this->options['host'], $this->options['port'] ) );
 		}
+
+		if ( ! $this->connection->login( $this->options['username'], $this->options['password'] ) ) {
+			return new WP_Error( 'sftp-login-error', sprintf( 'Could not login with username %s and provided password', $this->options['username'] ) );
+		}
+	}
+	
+	public function dir_file_list() {
+		return $this->connection->nlist( $this->options['path'] );
+	}
+
+	public function delete( $filename ) {
+		return $this->connection->delete( $filename );
 	}
 
 }

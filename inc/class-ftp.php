@@ -20,6 +20,10 @@ class HMBKP_FTP {
 		$this->options['port'] = 21;
 	}
 
+	public function __get( $property ) {
+		return $this->$property;
+	}
+
 	/**
 	 * Uploads a file to a remote location via FTP
 	 *
@@ -99,30 +103,9 @@ class HMBKP_FTP {
 			return new WP_Error( 'unsuccessful-login-error', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
 		}
 
-		$this->close();
-	}
+		$result = $this->close();
 
-	/**
-	 * Returns the link to download the backup file
-	 *
-	 * @param $path
-	 *
-	 * @return string
-	 */
-	public function get_download_url( $path ) {
-
-		$username = $this->options['username'];
-
-		$password = $this->options['password'];
-
-		$host = trailingslashit( $this->options['host'] );
-
-		$full_path = trailingslashit( $this->options['path'] ) . $path;
-
-		// ftp://user:password@example.com/pub/file.txt
-		$url = 'ftp://' . $username . ':' . $password . '@' . $host . $full_path;
-
-		return $url;
+		return $result;
 	}
 
 	/**
@@ -215,9 +198,11 @@ class HMBKP_FTP {
 	 *
 	 * @return bool|array
 	 */
-	public function dir_file_list( $path ) {
+	public function dir_file_list() {
 
-		return @ftp_nlist( $this->connectionm, $path );
+		@ftp_chdir( $this->connection, $this->options['path'] );
+
+		return @ftp_nlist( $this->connection, $this->options['path'] );
 
 	}
 
