@@ -1,668 +1,209 @@
 <?php
 
-defined( 'WPINC' ) or die;
-
-require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-encryption.php';
-
 /**
- * Class HMBKP_FTP_Backup_Service
+ * Class HMBKP_FTP
  */
-class HMBKP_FTP_Backup_Service extends HMBKP_Service {
+class HMBKP_FTP {
 
 	/**
-	 * Human readable name
-	 * @var string
-	 */
-	public $name = 'FTP';
-
-	/**
-	 * Whether to show this service in the tabbed interface of destinations
-	 * @var boolean
-	 */
-	public $is_tab_visible = true;
-
-	/**
-	 * FTP credentials
-	 * @var Array
-	 */
-	protected $credentials;
-
-	/**
-	 * Fire the FTP transfer on the hmbkp_backup_complete
+	 * The FTP connection stream
 	 *
-	 * @see  HM_Backup::do_action
-	 *
-	 * @param  string $action The action received from the backup
-	 *
-	 * @return void
+	 * @var resource
 	 */
-	public function action( $action ) {
+	protected $connection;
 
-		// it seems WP_Filesystem isn't loaded for Cron jobs
-		require_once( ABSPATH . 'wp-admin/includes/file.php' );
+	protected $options;
 
-		if ( ( 'hmbkp_backup_complete' === $action ) && $this->get_field_value( 'FTP' ) ) {
+	public function __construct( $options ) {
 
-			$file = $this->schedule->get_archive_filepath();
+		$this->options = $options;
+		$this->options['port'] = 21;
+	}
 
-			$this->credentials = array(
-				'hostname'        => $this->get_field_value( 'hostname' ),
-				'username'        => $this->get_field_value( 'username' ),
-				'password'        => HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) ),
-				'port'            => (int) $this->get_field_value( 'port' ),
-				'ssl'             => $this->get_field_value( 'ssl' ),
-				'connection_type' => $this->get_field_value( 'connection_type' )
-			);
-
-			// hook into the get_filesystem_method function to determine which one to use and avoid direct method
-			add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
-
-			// attempt a connection
-			if ( WP_Filesystem( $this->credentials ) ) {
-				$this->do_backup( $file );
-			} else {
-				$this->schedule->error( 'FTP', __( 'Unable to transfer the backup with the current settings', 'backupwordpress-pro-ftp' ) );
-			}
-		}
+	public function __get( $property ) {
+		return $this->$property;
 	}
 
 	/**
-	 * Determine appropriate filesystem connection method
+	 * Uploads a file to a remote location via FTP
 	 *
-	 * @param $method
-	 * @param $args credentials and connection settings
+	 * @param     $file_path Full path to local file to upload.
+	 * @param     $destination Remote file name.
+	 * @param int $size
 	 *
-	 * @return string Connection method
+	 * @return bool|WP_Error
 	 */
-	public function change_method( $method, $args ) {
+	public function upload( $file_path, $destination, $size = 0 ) {
 
-		// if method wasn't set in the wp-config
-		if ( defined( 'HMBKP_FS_METHOD' ) && in_array( HMBKP_FS_METHOD, array( 'ssh2', 'ftpext', 'ftpsockets' ) ) ) {
+		$logged_in_status = $this->login();
 
-			$method = HMBKP_FS_METHOD;
-
-		} elseif ( 'direct' == $method ) {
-
-			// determine FTP method
-			if ( 'ftp' === $args['connection_type'] && extension_loaded( 'ftp' ) ) {
-				$method = 'ftpext';
-
-			} elseif ( 'ftp' === $args['connection_type'] && ( extension_loaded( 'sockets' ) || function_exists( 'fsockopen' ) ) ) {
-				$method = 'ftpsockets';
-
-			} elseif ( 'sftp' === $args['connection_type'] && extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) {
-				$method = 'ssh2';
-
-			} else {
-				$method = '';
-			}
+		if ( is_wp_error( $logged_in_status ) ) {
+			return $logged_in_status;
 		}
 
-		return $method;
+		// check if folder exists else create it
+		if ( ! $this->is_dir( $this->options['path'] )
+		     && ! @ftp_mkdir( $this->connection, $this->options['path'] )
+		) {
+			return new WP_Error( 'ftp-write-error', sprintf( 'Unable to create remote directory %s', $this->options['path'] ) );
+		}
+
+		@ftp_chdir( $this->connection, $this->options['path'] );
+
+		if ( ! @ftp_put( $this->connection, $destination, $file_path, FTP_BINARY ) ) {
+			return new WP_Error( 'file-transfer-error', sprintf( 'Unable to transfer file %s', $destination ) );
+		}
+
+		return true;
 	}
 
 	/**
-	 * Returns the current working directory on the remote server.
-	 * @return string
-	 */
-	private function get_cwd() {
-
-		global $wp_filesystem;
-
-		$cwd = trim( untrailingslashit( $wp_filesystem->cwd() ) );
-
-		if ( $wp_filesystem->is_dir( $cwd ) ) {
-			return trailingslashit( $cwd );
-		}
-
-		return '';
-
-	}
-
-	/**
-	 * Performs the actual backup
+	 * Deletes a file on a remote server via FTP
 	 *
-	 * @param $file
+	 * @param $path
+	 *
+	 * @return bool|WP_Error
 	 */
-	public function do_backup( $file ) {
+	public function delete( $path ) {
 
-		// Give feedback on progress
-		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress-pro-ftp' ), $this->credentials['hostname'] ) );
+		$logged_in_status = $this->login();
 
-		global $wp_filesystem;
+		$full_path = trailingslashit( $this->options['path'] ) . $path;
 
-		// Get the backup folder location from user settings
-		$backup_dir = $this->get_field_value( 'folder' );
-
-		// Build backup file path
-		$destination = trailingslashit( $backup_dir ) . pathinfo( $file, PATHINFO_BASENAME );
-
-		// SSH needs root directory in path, use cwd()
-		if ( 'ssh2' === $wp_filesystem->method ) {
-			$backup_dir  = $this->get_cwd() . $backup_dir;
-			$destination = $this->get_cwd() . $destination;
+		if ( is_wp_error( $logged_in_status ) ) {
+			return $logged_in_status;
 		}
 
-		// Attempt to create the remote folder where backup file will be stored
-		if ( ! $wp_filesystem->exists( $backup_dir ) ) {
-
-			if ( ! $wp_filesystem->mkdir( $backup_dir ) ) {
-
-				$message = sprintf( __( 'Could not create directory %s', 'backupwordpress-pro-ftp' ), '/' . trailingslashit( $backup_dir ) );
-
-				$this->schedule->error( 'FTP', $message );
-
-				return;
-
-			}
+		if ( ! @ftp_delete( $this->connection, $full_path ) ) {
+			return new WP_Error( 'ftp-io-error', sprintf( 'Unable to delete file %s', $full_path ) );
 		}
 
-		// Retrieve our local zip file contents
-		if ( ! $handle = fopen( $file, 'r' ) ) {
-
-			$message = sprintf( __( 'Could not read backup file %s', 'backupwordpress-pro-ftp' ), $file );
-
-			$this->schedule->error( 'FTP', $message );
-
-			return;
-
-		}
-		$buffer = 10 * 1024 * 1024; // 10 MB buffer
-		$contents = '';
-		while ( ! feof($handle) ) {
-			$contents .= fread($handle, $buffer);
-			flush();
-		}
-		
-		fclose($handle);
-
-		// Write the contents of the local zip backup to remote server
-		if ( ! $wp_filesystem->put_contents( $destination, $contents ) ) {
-
-			$message = __( 'Error writing file to remote FTP server', 'backupwordpress-pro-ftp' );
-
-			$this->schedule->error( 'FTP', $message );
-
-			return;
-
-		} else {
-			$this->delete_old_backups();
-		}
-
+		return true;
 	}
 
 	/**
-	 * Frees up space on the specified remote server by only keeping the number of
-	 * backup files defined in the max backup settings and deleting older ones.
+	 * Tests the options
+	 *
+	 * @param $options
+	 *
+	 * @return WP_Error
 	 */
-	protected function delete_old_backups() {
+	public function test_options( $options ) {
 
-		global $wp_filesystem;
+		$this->connect( $options['host'] );
 
-		// hook into the get_filesystem_method function to determine which one to use and avoid direct method
-		add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
+		if ( ! $this->connection ) {
+			return new WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
+		}
 
-		// get max backups number
-		$max_backups = absint( $this->get_field_value( 'ftp_max_backups' ) );
+		$username = $options['username'];
+		$password = ( ! empty( $options['password'] ) ) ? $options['password'] : '';
 
-		// Get the backup folder location from user settings
-		$backup_dir = $this->get_field_value( 'folder' );
+		if ( ! @ftp_login( $this->connection, $username, $password ) ) {
+			return new WP_Error( 'unsuccessful-login-error', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
+		}
 
-		// get list of existing remote backups
-		$response = wp_list_pluck( $wp_filesystem->dirlist( $backup_dir ), 'name' );
+		$result = $this->close();
 
-		$backup_files = array_filter( $response, array( $this, 'filter_files' ) );
+		return $result;
+	}
 
-		if ( count( $backup_files ) <= $max_backups ) {
+	/**
+	 * Attempts to authenticate on remote server with provided credentials.
+	 * @return bool|WP_Error
+	 */
+	public function login() {
+
+		$this->connect( $this->options['host'], $this->options['port'] );
+
+		$username = $this->options['username'];
+		$password = ( ! empty( $this->options['password'] ) ) ? $this->options['password'] : '';
+
+		if ( ! @ftp_login( $this->connection, $username, $password ) ) {
+			return new WP_Error( 'unsuccessful-ftp-login', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
+		}
+
+		@ftp_pasv( $this->connection, true );
+
+		return true;
+	}
+
+	/**
+	 * Free up the FTP connection
+	 *
+	 * @return bool|WP_Error
+	 */
+	public function close() {
+
+		if ( ! @ftp_close( $this->connection ) ) {
+			return new WP_Error( 'ftp-disconnect-error', 'Unable to close the FTP connection' );
+		}
+
+		return true;
+	}
+
+	public function cwd() {
+
+		return @ftp_pwd( $this->connection );
+	}
+
+	/**
+	 * Opens an FTP conenction
+	 *
+	 * @param $host
+	 * @param $port
+	 *
+	 * @return WP_Error
+	 */
+	public function connect( $host, $port = 21 ) {
+
+		if ( ! is_null( $this->connection ) ) {
 			return;
 		}
 
-		krsort( $backup_files );
+		$this->connection = @ftp_connect( $host, $port );
 
-		$files_to_delete = array_slice( $backup_files, $max_backups );
-
-		// @TODO : actually delete the files!
-		foreach ( $files_to_delete as $filename ) {
-			$filetest = $this->get_cwd() . trailingslashit( $backup_dir ) . $filename;
+		if ( ! $this->connection ) {
+			return new WP_Error( 'ftp-connection-error', sprintf( 'Could not connect to %1$ss on port %2$s', $host, $port ) );
 		}
 
 	}
 
 	/**
-	 * Callback to filter an array based on the backup prefix
+	 * Checks if folder exists
 	 *
-	 * @param $element
+	 * @param $path
 	 *
 	 * @return bool
 	 */
-	protected function filter_files( $element ) {
+	function is_dir( $path ) {
 
-		$pattern = implode( '-', array(
-				sanitize_title( str_ireplace( array( 'http://', 'https://', 'www' ), '', home_url() ) ),
-				$this->schedule->get_id(),
-				$this->schedule->get_type(),
-			)
-		);
+		$cwd = $this->cwd();
 
-		return ( false === ( strpos( $element, $pattern ) ) ) ? false : true;
+		$result = @ftp_chdir( $this->connection, trailingslashit( $path ) );
+
+		if ( $result && $path == $this->cwd() || $this->cwd() != $cwd ) {
+
+			@ftp_chdir( $this->connection, $cwd );
+
+			return true;
+
+		}
+
+		return false;
 	}
 
 	/**
-	 * Displays the settings form for the FTP backup
-	 */
-	public function form() {
-
-		$hostname = $this->get_field_value( 'hostname' );
-
-		if ( empty( $hostname ) ) {
-
-			$options = $this->fetch_destination_settings();
-
-			if ( ! empty( $options ) ) {
-				$hostname = $options['hostname'];
-			}
-		}
-
-		$type = $this->get_field_value( 'connection_type' );
-
-		if ( empty( $type ) && ( isset( $options['connection_type'] ) ) ) {
-			$type = $options['connection_type'];
-		}
-
-		// set a default value if none is set
-		if ( empty( $type ) ) {
-			$type = 'ftp';
-		}
-
-		$port = $this->get_field_value( 'port' );
-
-		if ( empty( $port ) && ( isset( $options['port'] ) ) ) {
-			$port = $options['port'];
-		}
-
-		$ssl = $this->get_field_value( 'ssl' );
-
-		if ( empty( $ssl ) && ( isset( $options['ssl'] ) ) ) {
-			$port = $options['ssl'];
-		}
-
-		$username = $this->get_field_value( 'username' );
-
-		if ( empty( $username ) && ( isset( $options['username'] ) ) ) {
-			$username = $options['username'];
-		}
-
-		$pwd = HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) );
-
-		if ( empty( $pwd ) && ( isset( $options['password'] ) ) ) {
-			$pwd = HMBKP_Encryption::decrypt( $options['password'] );
-		}
-
-		$folder = $this->get_field_value( 'folder' );
-
-		if ( empty( $folder ) && ( isset( $options['folder'] ) ) ) {
-			$folder = $options['folder'];
-		}
-
-		$max_backups = $this->get_field_value( 'ftp_max_backups' );
-
-		if ( empty( $max_backups ) && isset( $options['ftp_max_backups'] ) ) {
-			$max_backups = $options['ftp_max_backups'];
-		} ?>
-
-		<table class="form-table">
-
-			<tbody>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input id="<?php echo $this->get_field_name( 'FTP' ); ?>" type="checkbox" <?php checked( $this->get_field_value( 'FTP' ) ); ?> name="<?php echo $this->get_field_name( 'FTP' ); ?>" value="1"/>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo esc_attr( $hostname ); ?>"/>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
-
-						<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></option>
-
-						<?php if ( extension_loaded( 'ssh2' ) && function_exists( 'stream_get_contents' ) ) : ?>
-
-							<option <?php selected( $type, 'sftp' ); ?> value="sftp"><?php _e( 'SFTP', 'backupwordpress-pro-ftp' ); ?></option>
-
-							<option <?php selected( $type, 'ssh2' ); ?> value="ssh2"><?php _e( 'SSH2', 'backupwordpress-pro-ftp' ); ?></option>
-
-						<?php endif; ?>
-
-					</select>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo ! empty( $port ) ? esc_attr( $port ) : 21; ?>"/>
-
-					<p class="description"><?php _e( 'Port (e.g. 21).', 'backupwordpress-pro-ftp' ); ?></p>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'ssl' ); ?>"><?php _e( 'Force SSL', 'backupwordpress-pro-ftp' ); ?></label>
-				</th>
-
-				<td>
-
-					<input type="checkbox" id="<?php echo $this->get_field_name( 'ssl' ); ?>" name="<?php echo $this->get_field_name( 'ssl' ); ?>" value="1" <?php checked( $ssl ); ?> />
-				</td>
-
-			</tr>
-
-			<tr>
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'username' ); ?>"><?php _e( 'Username', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo esc_attr( $username ); ?>"/>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'password' ); ?>"><?php _e( 'Password', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo esc_attr( $pwd ); ?>"/>
-
-				</td>
-
-			</tr>
-
-			<tr>
-
-				<th scope="row">
-
-					<label for="<?php echo $this->get_field_name( 'folder' ); ?>"><?php _e( 'Folder', 'backupwordpress-pro-ftp' ); ?></label>
-
-				</th>
-
-				<td>
-
-					<input type="text" id="<?php echo $this->get_field_name( 'folder' ); ?>" name="<?php echo $this->get_field_name( 'folder' ); ?>" value="<?php echo ! empty( $folder ) ? $folder : sanitize_title_with_dashes( get_bloginfo( 'name' ) ); ?>"/>
-
-					<p class="description"><?php _e( 'The folder to save the backups to, it will be created automatically if it doesn\'t already exist.', 'backupwordpress-pro-ftp' ); ?></p>
-				</td>
-			</tr>
-
-			<tr>
-				<th scope="row">
-					<label for="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>"><?php _e( 'Max backups', 'backupwordpress-pro-ftp' ); ?></label>
-				</th>
-				<td>
-					<input  class="small-text" type="number" min="1" step="1" id="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" name="<?php echo $this->get_field_name( 'ftp_max_backups' ); ?>" value="<?php echo( empty( $max_backups ) ? 3 : $max_backups ); ?>"/>
-
-					<p class="description"><?php _e( 'The maximum number of backups to store.', 'backupwordpress-pro-ftp' ); ?></p>
-				</td>
-			</tr>
-
-			</tbody>
-
-		</table>
-
-		<input type="hidden" name="is_destination_form" value="1"/>
-
-	<?php
-	}
-
-	/**
-	 * Output the Constant help text.
-	 */
-	public static function constant() {
-		?>
-
-		<tr<?php if ( defined( 'HMBKP_FS_METHOD' ) ) { ?> class="hmbkp_active"<?php } ?>>
-
-			<td><code>HMBKP_FS_METHOD</code></td>
-
-			<td>
-
-				<?php if ( defined( 'HMBKP_FS_METHOD' ) ) { ?>
-					<p><?php printf( __( 'You\'ve set it to: %s', 'hmbkp' ), '<code>' . HMBKP_FS_METHOD . '</code>' ); ?></p>
-				<?php } ?>
-
-				<p><?php printf( __( 'The transport method for all backup transfers. Must be one of %s, %s, %s.', 'backupwordpress-ftp' ), '<code>ftpext</code>', '<code>ftpsockets</code>', '<code>ssh2</code>' ); ?> <?php _e( 'e.g.', 'backupwordpress-ftp' ); ?>
-					<code>define( 'HMBKP_FS_METHOD', 'ssh2' );</code></p>
-
-			</td>
-
-		</tr>
-
-	<?php
-	}
-
-	/**
-	 * Define as an empty function as we are using form
-	 */
-	public function field() {
-	}
-
-	/**
-	 * Validate the data before saving, if there are errors, return them to the user
+	 * @param string $path
 	 *
-	 * @param  array $new_data the new data thats being saved
-	 * @param  array $old_data the old data thats being overwritten
-	 *
-	 * @return array           any errors encountered
+	 * @return bool|array
 	 */
-	public function update( &$new_data, $old_data ) {
+	public function dir_file_list() {
 
-		global $wp_filesystem;
+		@ftp_chdir( $this->connection, $this->options['path'] );
 
-		$errors = array();
-
-		if ( ! isset( $new_data['FTP'] ) ) {
-			return;
-		} // Destination was disabled
-
-		if ( isset( $new_data['hostname'] ) ) {
-			if ( empty( $new_data['hostname'] ) ) {
-				$errors['hostname'] = __( 'Please provide a valid hostname', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		if ( isset( $new_data['port'] ) ) {
-			if ( empty( $new_data['port'] ) ) {
-				$errors['port'] = __( 'Please provide a valid port number', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		if ( isset( $new_data['connection_type'] ) ) {
-			if ( empty( $new_data['connection_type'] ) ) {
-				$errors['connection_type'] = __( 'Please provide a valid connection type', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		if ( defined( 'HMBKP_FS_METHOD' ) && HMBKP_FS_METHOD ) {
-			$new_data['connection_type'] = HMBKP_FS_METHOD;
-		}
-
-		if ( isset( $new_data['username'] ) ) {
-			if ( empty( $new_data['username'] ) ) {
-				$errors['username'] = __( 'Please provide a valid username', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		if ( isset( $new_data['password'] ) ) {
-
-			if ( empty( $new_data['password'] ) ) {
-				$errors['password'] = __( 'Please provide a valid password', 'backupwordpress-pro-ftp' );
-			} else {
-				$new_data['password'] = HMBKP_Encryption::encrypt( $new_data['password'] );
-			}
-		}
-
-		if ( isset( $new_data['folder'] ) ) {
-			if ( empty( $new_data['folder'] ) ) {
-				$errors['folder'] = __( 'Please provide a valid folder path', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		if ( isset( $new_data['ftp_max_backups'] ) ) {
-			if ( empty( $new_data['ftp_max_backups'] ) || ! ctype_digit( $new_data['ftp_max_backups'] ) ) {
-				$errors['ftp_max_backups'] = __( 'Max backups must be a number', 'backupwordpress-pro-ftp' );
-			}
-		}
-
-		$credentials             = $new_data;
-		$credentials['password'] = HMBKP_Encryption::decrypt( $new_data['password'] );
-
-		// Hook into the get_filesystem_method function to determine which one to use and avoid direct method
-		if ( ! has_filter( 'filesystem_method', array( $this, 'change_method' ) ) ) {
-			add_filter( 'filesystem_method', array( $this, 'change_method' ), 15, 2 );
-		}
-
-		if ( empty( $errors ) && ! WP_Filesystem( $credentials ) ) {
-
-			$fs_errors = $wp_filesystem->errors->get_error_messages();
-
-			$message = implode( ' ', $fs_errors );
-
-			$errors['hostname'] = $message;
-
-		}
-
-		return $errors;
+		return @ftp_nlist( $this->connection, $this->options['path'] );
 
 	}
 
-	/**
-	 * The words to append to the main schedule sentence
-	 * @return string The words that will be appended to the main schedule sentence
-	 */
-	public function display() {
-
-		if ( $this->is_service_active() ) {
-			return sprintf( __( '%1$s %2$s', 'backupwordpress-pro-ftp' ), $this->name, $this->get_field_value( 'hostname' ) );
-		}
-
-	}
-
-	/**
-	 * Used to determine if the service is in use or not
-	 * @return bool True if service is active
-	 */
-	public function is_service_active() {
-		return (bool) $this->get_field_value( 'FTP' );
-	}
-
-	/**
-	 * FTP specific data to send to Intercom.
-	 *
-	 * @return array
-	 */
-	public static function intercom_data() {
-
-		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-requirements.php';
-
-		$info = array();
-
-		foreach ( HMBKP_Requirements::get_requirements( 'ftp' ) as $requirement ) {
-			$info[ $requirement->name() ] = $requirement->result();
-		}
-
-		return $info;
-	}
-
-	/**
-	 * FTP specific data to show in the admin help tab.
-	 */
-	public static function intercom_data_html() {
-
-		require_once HMBKP_FTP_PLUGIN_PATH . 'inc/class-requirements.php'; ?>
-
-		<h3><?php _e( 'FTP', 'backupwordpress-pro-ftp' ); ?></h3>
-
-		<table class="fixed widefat">
-
-			<tbody>
-
-			<?php foreach ( HMBKP_Requirements::get_requirements( 'ftp' ) as $requirement ) : ?>
-
-				<tr>
-					<td><?php echo $requirement->name(); ?></td>
-					<td>
-						<pre><?php echo $requirement->result(); ?></pre>
-					</td>
-				</tr>
-
-			<?php endforeach; ?>
-
-			</tbody>
-
-		</table>
-
-	<?php
-	}
-
-} // end HMBKP_FTP_Backup_Service
-
-HMBKP_Services::register( __FILE__, 'HMBKP_FTP_Backup_Service' );
+}
