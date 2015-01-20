@@ -95,6 +95,10 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		// get list of existing remote backups
 		$response = $this->connection->dir_file_list();
 
+		if ( false === $response ) {
+			return;
+		}
+
 		$backup_files = array_filter( $response, array( $this, 'filter_files' ) );
 
 		if ( count( $backup_files ) <= $max_backups ) {
