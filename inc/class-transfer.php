@@ -75,7 +75,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		if ( is_wp_error( $result ) ) {
 			$this->schedule->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 		} else {
-			$this->delete_old_backups();
+			//$this->delete_old_backups();
 		}
 
 	}
@@ -185,6 +185,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			$max_backups = $options['ftp_max_backups'];
 		} ?>
 
+
 		<table class="form-table">
 
 			<tbody>
@@ -192,6 +193,10 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			<tr>
 
 				<th scope="row">
+
+					<div class="notice">
+						<p><?php esc_html_e( 'BackUpWordPress does not delete old backups on your remote FTP server, we suggest you delete older backups regularly.', 'backupwordpress' ); ?></p>
+					</div>
 
 					<label for="<?php echo $this->get_field_name( 'FTP' ); ?>"><?php _e( 'Send a copy of each backup to an FTP server', 'backupwordpress' ); ?></label>
 
