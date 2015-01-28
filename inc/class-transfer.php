@@ -438,7 +438,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 					$this->connection = new SFTP( $this->credentials );
 					break;
 				default:
-					var_dump($new_data);
+					$this->schedule->error( 'FTP', __( 'An unexpected error occurred: %s', 'backupwordpress' ) );
 					break;
 			}
 			$result = $this->connection->test_options( $this->credentials );
