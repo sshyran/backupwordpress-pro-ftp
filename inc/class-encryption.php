@@ -1,10 +1,10 @@
 <?php
-defined( 'WPINC' ) or die;
+namespace HM\BackUpWordPressFTP;
 
 /**
  * Encrypt sensitive info
  */
-class HMBKP_Encryption {
+class Encryption {
 
 	/**
 	 *

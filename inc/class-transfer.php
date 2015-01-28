@@ -1,15 +1,16 @@
 <?php
+namespace HM\BackUpWordPressFTP;
 
-defined( 'WPINC' ) or die;
+use HM\BackUpWordPress;
 
 require_once plugin_dir_path( __FILE__ ) . 'class-encryption.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-ftp.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-sftp.php';
 
 /**
- * Class HMBKP_FTP_Backup_Service
+ * Class FTP_Backup_Service
  */
-class HMBKP_FTP_Backup_Service extends HMBKP_Service {
+class FTP_Backup_Service extends BackUpWordPress\Service {
 
 	/**
 	 * Human readable name
@@ -34,25 +35,27 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	 *
 	 * @return void
 	 */
-	public function action( $action ) {
+	public function action( $action, BackUpWordPress\Backup $backup ) {
 
 		if ( ( 'hmbkp_backup_complete' === $action ) && $this->get_field_value( 'FTP' ) ) {
 
-			$file = $this->schedule->get_archive_filepath();
+			$this->schedule->set_status( __( 'Uploading to FTP', 'backupwordpress' ) );
+
+			$file = $backup->get_archive_filepath();
 
 			$this->credentials = array(
 				'host'        => $this->get_field_value( 'hostname' ),
 				'username'        => $this->get_field_value( 'username' ),
-				'password'        => HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) ),
+				'password'        => Encryption::decrypt( $this->get_field_value( 'password' ) ),
 				'path' => $this->get_field_value( 'folder' ),
 			);
 
 			switch ( $this->get_field_value( 'connection_type' ) ) {
 				case 'ftp':
-					$this->connection = new HMBKP_FTP( $this->credentials );
+					$this->connection = new FTP( $this->credentials );
 					break;
 				case 'sftp':
-					$this->connection = new HMBKP_SFTP( $this->credentials );
+					$this->connection = new SFTP( $this->credentials );
 					break;
 			}
 
@@ -73,7 +76,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 		$result = $this->connection->upload( $file, pathinfo( $file, PATHINFO_BASENAME ) );
 
 		if ( is_wp_error( $result ) ) {
-			$this->schedule->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			$backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 		} else {
 			//$this->delete_old_backups();
 		}
@@ -167,10 +170,10 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 			$username = $options['username'];
 		}
 
-		$pwd = HMBKP_Encryption::decrypt( $this->get_field_value( 'password' ) );
+		$pwd = Encryption::decrypt( $this->get_field_value( 'password' ) );
 
 		if ( empty( $pwd ) && ( isset( $options['password'] ) ) ) {
-			$pwd = HMBKP_Encryption::decrypt( $options['password'] );
+			$pwd = Encryption::decrypt( $options['password'] );
 		}
 
 		$folder = $this->get_field_value( 'folder' );
@@ -230,13 +233,13 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 				<th scope="row">
 
-					<label for="HMBKP_FTP_Backup_Service[connection_type]"><?php _e( 'Connection type', 'backupwordpress' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'connection_type' ); ?>"><?php _e( 'Connection type', 'backupwordpress' ); ?></label>
 
 				</th>
 
 				<td>
 
-					<select name="HMBKP_FTP_Backup_Service[connection_type]" id="HMBKP_FTP_Backup_Service[connection_type]" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
+					<select name="<?php echo $this->get_field_name( 'connection_type' ); ?>" id="<?php echo $this->get_field_name( 'connection_type' ); ?>" <?php disabled( defined( 'HMBKP_FS_METHOD' ) ); ?>>
 
 						<option <?php selected( $type, 'ftp' ); ?> value="ftp"><?php _e( 'FTP', 'backupwordpress' ); ?></option>
 
@@ -402,7 +405,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 				$errors['password'] = __( 'Please provide a valid password', 'backupwordpress' );
 			} else {
 				$test_pw = $new_data['password'];
-				$new_data['password'] = HMBKP_Encryption::encrypt( $new_data['password'] );
+				$new_data['password'] = Encryption::encrypt( $new_data['password'] );
 			}
 		}
 
@@ -427,18 +430,17 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 				//'ssl'             => $new_data['ssl'],
 			);
 
-			switch ( $this->get_field_value( 'connection_type' ) ) {
+			switch ( $new_data['connection_type'] ) {
 				case 'ftp':
-					$this->connection = new HMBKP_FTP( $this->credentials );
+					$this->connection = new FTP( $this->credentials );
 					break;
 				case 'sftp':
-					$this->connection = new HMBKP_SFTP( $this->credentials );
+					$this->connection = new SFTP( $this->credentials );
 					break;
 				default:
-					// throw an error
+					var_dump($new_data);
 					break;
 			}
-
 			$result = $this->connection->test_options( $this->credentials );
 
 			if ( is_wp_error( $result ) ) {
@@ -481,7 +483,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 		$info = array();
 
-		foreach ( HMBKP_Requirements::get_requirements( 'ftp' ) as $requirement ) {
+		foreach ( BackUpWordPress\Requirements::get_requirements( 'ftp' ) as $requirement ) {
 			$info[ $requirement->name() ] = $requirement->result();
 		}
 
@@ -501,7 +503,7 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 
 			<tbody>
 
-			<?php foreach ( HMBKP_Requirements::get_requirements( 'ftp' ) as $requirement ) : ?>
+			<?php foreach ( BackUpWordPress\Requirements::get_requirements( 'ftp' ) as $requirement ) : ?>
 
 				<tr>
 					<td><?php echo $requirement->name(); ?></td>
@@ -519,6 +521,6 @@ class HMBKP_FTP_Backup_Service extends HMBKP_Service {
 	<?php
 	}
 
-} // end HMBKP_FTP_Backup_Service
+}
 
-HMBKP_Services::register( __FILE__, 'HMBKP_FTP_Backup_Service' );
+BackUpWordPress\Services::register( __FILE__, 'HM\BackUpWordPressFTP\FTP_Backup_Service' );

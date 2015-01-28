@@ -1,10 +1,11 @@
 <?php
 
+namespace HM\BackUpWordPressFTP;
+
 /**
  * Class SFTP
- * @package WPRemote\Backups\Locations
  */
-class HMBKP_SFTP {
+class SFTP {
 
 	protected $connection;
 
@@ -63,8 +64,8 @@ class HMBKP_SFTP {
 
 		$this->connect( $options['host'] );
 
-		if ( ! ( $this->connection instanceof Net_SFTP ) ) {
-			return new WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
+		if ( ! ( $this->connection instanceof \Net_SFTP ) ) {
+			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
 		}
 
 		$username = $options['username'];
@@ -93,10 +94,10 @@ class HMBKP_SFTP {
 			return;
 		}
 
-		$this->connection = new Net_SFTP( $host );
+		$this->connection = new \Net_SFTP( $host );
 
 		if ( ! $this->connection ) {
-			return new WP_Error( 'sftp-connection-error', sprintf( 'Could not connect to host %1$s on port %$2s', $host, $port ) );
+			return new \WP_Error( 'sftp-connection-error', sprintf( 'Could not connect to host %1$s on port %$2s', $host, $port ) );
 		}
 
 	}
@@ -105,12 +106,12 @@ class HMBKP_SFTP {
 
 		$this->connect( $this->options['host'] );
 
-		if ( ! ( $this->connection instanceof Net_SFTP ) ) {
-			return new WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $this->options['host'], $this->options['port'] ) );
+		if ( ! ( $this->connection instanceof \Net_SFTP ) ) {
+			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $this->options['host'], $this->options['port'] ) );
 		}
 
 		if ( ! $this->connection->login( $this->options['username'], $this->options['password'] ) ) {
-			return new WP_Error( 'sftp-login-error', sprintf( 'Could not login with username %s and provided password', $this->options['username'] ) );
+			return new \WP_Error( 'sftp-login-error', sprintf( 'Could not login with username %s and provided password', $this->options['username'] ) );
 		}
 	}
 	
