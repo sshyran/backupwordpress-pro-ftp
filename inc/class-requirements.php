@@ -1,10 +1,12 @@
 <?php
-defined( 'WPINC' ) or die;
+namespace HM\BackUpWordPressFTP;
+
+use HM\BackUpWordPress;
 
 /**
  * Class HMBKP_Requirement_Define_HMBKP_FS_METHOD
  */
-class HMBKP_Requirement_Define_HMBKP_FS_METHOD extends HMBKP_Requirement {
+class HMBKP_Requirement_Define_HMBKP_FS_METHOD extends BackUpWordPress\Requirement {
 
 	/**
 	 * @var string
@@ -22,12 +24,12 @@ class HMBKP_Requirement_Define_HMBKP_FS_METHOD extends HMBKP_Requirement {
 
 }
 
-HMBKP_Requirements::register( 'HMBKP_Requirement_Define_HMBKP_FS_METHOD', 'ftp' );
+BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\HMBKP_Requirement_Define_HMBKP_FS_METHOD', 'ftp' );
 
 /**
  * Class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS
  */
-class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends HMBKP_Requirement {
+class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends BackUpWordPress\Requirement {
 
 	var $name = 'License Status';
 
@@ -36,7 +38,7 @@ class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends HMBKP_Requireme
 	 */
 	protected function test() {
 
-		$plugin = BackUpWordPress_FTP::get_instance();
+		$plugin = Plugin::get_instance();
 		$settings = $plugin->fetch_settings();
 
 		return ( isset( $settings['license_status'] ) && 'valid' === $settings['license_status'] ) ? 'License is valid' : 'License is invalid or not set';
@@ -45,4 +47,4 @@ class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends HMBKP_Requireme
 
 }
 
-HMBKP_Requirements::register( 'HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS', 'ftp' );
+BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS', 'ftp' );

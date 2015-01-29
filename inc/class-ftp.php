@@ -1,9 +1,10 @@
 <?php
+namespace HM\BackUpWordPressFTP;
 
 /**
  * Class HMBKP_FTP
  */
-class HMBKP_FTP {
+class FTP {
 
 	/**
 	 * The FTP connection stream
@@ -45,13 +46,13 @@ class HMBKP_FTP {
 		if ( ! $this->is_dir( $this->options['path'] )
 		     && ! @ftp_mkdir( $this->connection, $this->options['path'] )
 		) {
-			return new WP_Error( 'ftp-write-error', sprintf( 'Unable to create remote directory %s', $this->options['path'] ) );
+			return new \WP_Error( 'ftp-write-error', sprintf( 'Unable to create remote directory %s', $this->options['path'] ) );
 		}
 
 		@ftp_chdir( $this->connection, $this->options['path'] );
 
 		if ( ! @ftp_put( $this->connection, $destination, $file_path, FTP_BINARY ) ) {
-			return new WP_Error( 'file-transfer-error', sprintf( 'Unable to transfer file %s', $destination ) );
+			return new \WP_Error( 'file-transfer-error', sprintf( 'Unable to transfer file %s', $destination ) );
 		}
 
 		return true;
@@ -75,7 +76,7 @@ class HMBKP_FTP {
 		}
 
 		if ( ! @ftp_delete( $this->connection, $full_path ) ) {
-			return new WP_Error( 'ftp-io-error', sprintf( 'Unable to delete file %s', $full_path ) );
+			return new \WP_Error( 'ftp-io-error', sprintf( 'Unable to delete file %s', $full_path ) );
 		}
 
 		return true;
@@ -93,14 +94,14 @@ class HMBKP_FTP {
 		$this->connect( $options['host'] );
 
 		if ( ! $this->connection ) {
-			return new WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
+			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
 		}
 
 		$username = $options['username'];
 		$password = ( ! empty( $options['password'] ) ) ? $options['password'] : '';
 
 		if ( ! @ftp_login( $this->connection, $username, $password ) ) {
-			return new WP_Error( 'unsuccessful-login-error', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
+			return new \WP_Error( 'unsuccessful-login-error', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
 		}
 
 		$result = $this->close();
@@ -120,7 +121,7 @@ class HMBKP_FTP {
 		$password = ( ! empty( $this->options['password'] ) ) ? $this->options['password'] : '';
 
 		if ( ! @ftp_login( $this->connection, $username, $password ) ) {
-			return new WP_Error( 'unsuccessful-ftp-login', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
+			return new \WP_Error( 'unsuccessful-ftp-login', sprintf( 'Could not authenticate with username %1$s and provided password', $username ) );
 		}
 
 		@ftp_pasv( $this->connection, true );
@@ -136,7 +137,7 @@ class HMBKP_FTP {
 	public function close() {
 
 		if ( ! @ftp_close( $this->connection ) ) {
-			return new WP_Error( 'ftp-disconnect-error', 'Unable to close the FTP connection' );
+			return new \WP_Error( 'ftp-disconnect-error', 'Unable to close the FTP connection' );
 		}
 
 		return true;
@@ -164,7 +165,7 @@ class HMBKP_FTP {
 		$this->connection = @ftp_connect( $host, $port );
 
 		if ( ! $this->connection ) {
-			return new WP_Error( 'ftp-connection-error', sprintf( 'Could not connect to %1$ss on port %2$s', $host, $port ) );
+			return new \WP_Error( 'ftp-connection-error', sprintf( 'Could not connect to %1$ss on port %2$s', $host, $port ) );
 		}
 
 	}

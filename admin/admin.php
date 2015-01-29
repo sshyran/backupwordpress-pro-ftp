@@ -102,11 +102,12 @@ function hmbkpp_ftp_license_validity_notice( $license_status ) { ?>
 
 function hmbkpp_ftp_add_api_key_admin_notice() {
 
-	$plugin = BackUpWordPress_FTP::get_instance();
+	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 
-	if ( 'valid' == $settings['license_status'] )
+	if ( 'valid' == $settings['license_status'] ) {
 		return;
+	}
 
 	// new license key entered, form submitted
 	if ( isset( $_GET['settings-updated'] ) && isset( $settings['hmbkpp-ftp-settings-updated'] ) ) {
@@ -119,7 +120,7 @@ function hmbkpp_ftp_add_api_key_admin_notice() {
 		hmbkpp_ftp_activate_license();
 
 		// Settings have changed
-		$plugin = BackUpWordPress_FTP::get_instance();
+		$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 		$settings = $plugin->fetch_settings();
 
 		hmbkpp_ftp_license_validity_notice( $settings['license_status'] );
@@ -139,7 +140,7 @@ add_action( 'admin_notices', 'hmbkpp_ftp_add_api_key_admin_notice' );
 function hmbkpp_ftp_activate_license() {
 
 	// retrieve the license from the database
-	$plugin = BackUpWordPress_FTP::get_instance();
+	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
@@ -147,11 +148,11 @@ function hmbkpp_ftp_activate_license() {
 	$api_params = array(
 		'edd_action'=> 'activate_license',
 		'license' 	=> $license,
-		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
+		'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	// make sure the response came back okay
 	if ( is_wp_error( $response ) )
@@ -175,7 +176,7 @@ function hmbkpp_ftp_activate_license() {
 function hmbkpp_ftp_deactivate_license() {
 
 	// retrieve the license from the database
-	$plugin = BackUpWordPress_FTP::get_instance();
+	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
@@ -183,11 +184,11 @@ function hmbkpp_ftp_deactivate_license() {
 	$api_params = array(
 		'edd_action'=> 'deactivate_license',
 		'license' 	=> $license,
-		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
+		'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME ) // the name of our product in EDD
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	// make sure the response came back okay
 	if ( is_wp_error( $response ) )
@@ -196,7 +197,7 @@ function hmbkpp_ftp_deactivate_license() {
 	// decode the license data
 	$license_data = json_decode( wp_remote_retrieve_body( $response ) );
 
-	$plugin = BackUpWordPress_FTP::get_instance();
+	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 
 	// $license_data->license will be either "deactivated" or "failed"
@@ -220,18 +221,18 @@ function hmbkpp_ftp_check_license() {
 
 	global $wp_version;
 
-	$plugin = BackUpWordPress_FTP::get_instance();
+	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
 	$api_params = array(
 		'edd_action' => 'check_license',
 		'license' => $license,
-		'item_name' => urlencode( BackUpWordPress_FTP::EDD_DOWNLOAD_FILE_NAME )
+		'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME )
 	);
 
 	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, BackUpWordPress_FTP::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
 	if ( is_wp_error( $response ) )
 		return false;

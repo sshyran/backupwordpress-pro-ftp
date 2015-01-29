@@ -29,16 +29,18 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+namespace HM\BackUpWordPressFTP;
 
+use HM\BackUpWordPress;
 
-register_activation_hook( __FILE__, array( 'BackUpWordPress_FTP', 'on_activation' ) );
+register_activation_hook( __FILE__, array( 'HM\BackUpWordPressFTP\Plugin', 'on_activation' ) );
 
-register_deactivation_hook( __FILE__, array( 'BackUpWordPress_FTP', 'on_deactivation' ) );
+register_deactivation_hook( __FILE__, array( 'HM\BackUpWordPressFTP\Plugin', 'on_deactivation' ) );
 
 /**
- * Class BackUpWordPress_FTP
+ * Class Plugin
  */
-class BackUpWordPress_FTP {
+class Plugin {
 
 	/**
 	 * The plugin version number.
@@ -80,12 +82,12 @@ class BackUpWordPress_FTP {
 	}
 
 	/**
-	 * @return BackUpWordPress_FTP
+	 * @return Plugin
 	 */
 	public static function get_instance() {
 
-		if ( ! ( self::$instance instanceof BackUpWordPress_FTP ) ) {
-			self::$instance = new BackUpWordPress_FTP();
+		if ( ! ( self::$instance instanceof Plugin ) ) {
+			self::$instance = new Plugin();
 		}
 
 		return self::$instance;
@@ -144,7 +146,7 @@ class BackUpWordPress_FTP {
 	 */
 	protected function includes() {
 
-		if ( ! class_exists( 'HMBKPP_SL_Plugin_Updater' ) ) {
+		if ( ! class_exists( '\HMBKPP_SL_Plugin_Updater' ) ) {
 			include( plugin_dir_path( __FILE__ ) . 'assets/edd-plugin-updater/HMBKPP-SL-Plugin-Updater.php' );
 		}
 
@@ -167,7 +169,7 @@ class BackUpWordPress_FTP {
 		$license_key = $settings['license_key'];
 
 		// Setup the updater
-		$edd_updater = new HMBKPP_SL_Plugin_Updater( self::EDD_STORE_URL, __FILE__, array(
+		$edd_updater = new \HMBKPP_SL_Plugin_Updater( self::EDD_STORE_URL, __FILE__, array(
 				'version'   => self::PLUGIN_VERSION, // current version number
 				'license'   => $license_key, // license key (used get_option above to retrieve from DB)
 				'item_name' => self::EDD_DOWNLOAD_FILE_NAME, // name of this plugin
@@ -236,13 +238,13 @@ class BackUpWordPress_FTP {
 	 */
 	public function meets_requirements() {
 
-		if ( ! class_exists( 'BackUpWordPress_Plugin' ) ) {
+		if ( ! class_exists( 'HM\BackUpWordPress\Plugin' ) ) {
 			return false;
 		}
 
-		$bwp = BackUpWordPress_Plugin::get_instance();
+		$bwp = BackUpWordPress\Plugin::get_instance();
 
-		if ( version_compare( BackUpWordPress_Plugin::PLUGIN_VERSION, self::MIN_BWP_VERSION, '<' ) ) {
+		if ( version_compare( BackUpWordPress\Plugin::PLUGIN_VERSION, self::MIN_BWP_VERSION, '<' ) ) {
 			return false;
 		}
 
@@ -250,4 +252,4 @@ class BackUpWordPress_FTP {
 	}
 
 }
-BackUpWordPress_FTP::get_instance();
+Plugin::get_instance();
