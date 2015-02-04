@@ -4,7 +4,7 @@ Plugin Name: BackUpWordPress to FTP
 Plugin URI: https://bwp.hmn.md/downloads/backupwordpress-to-ftp/
 Description: Send your backups to your Dropbox account
 Author: Human Made Limited
-Version: 2.0.4
+Version: 2.0.5
 Author URI: https://bwp.hmn.md/
 License: GPLv2
 Network: true
@@ -45,12 +45,12 @@ class Plugin {
 	/**
 	 * The plugin version number.
 	 */
-	const PLUGIN_VERSION = '2.0.4';
+	const PLUGIN_VERSION = '2.0.5';
 
 	/**
 	 * Minimum version of BackUpWordPress compatibility.
 	 */
-	const MIN_BWP_VERSION = '3.0.4';
+	const MIN_BWP_VERSION = '3.1.2';
 
 	/**
 	 * URL for the updater to ping for a new version.
