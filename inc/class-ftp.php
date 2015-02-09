@@ -94,7 +94,7 @@ class FTP {
 		$this->connect( $options['host'] );
 
 		if ( ! $this->connection ) {
-			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
+			return new \WP_Error( 'unsuccessful-connection-error', __( 'Could not connect to host', 'backupwordpress' ) );
 		}
 
 		$username = $options['username'];

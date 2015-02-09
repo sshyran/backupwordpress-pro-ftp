@@ -422,12 +422,12 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 		}
 
 		if ( empty ( $errors ) ) {
+
 			$this->credentials = array(
 				'host'        => $new_data['hostname'],
-				'username'        => $new_data['username'],
-				'password'        => $test_pw,
-				'path' => $this->get_field_value( 'folder' ),
-				//'ssl'             => $new_data['ssl'],
+				'username'    => $new_data['username'],
+				'password'    => $test_pw,
+				'path'        => $this->get_field_value( 'folder' ),
 			);
 
 			switch ( $new_data['connection_type'] ) {
@@ -444,12 +444,11 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 			$result = $this->connection->test_options( $this->credentials );
 
 			if ( is_wp_error( $result ) ) {
-				$this->schedule->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+				$this->schedule->backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 			}
 
-			return $errors;
-
 		}
+		return $errors;
 	}
 
 	/**
