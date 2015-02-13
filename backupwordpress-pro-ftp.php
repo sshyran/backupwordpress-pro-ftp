@@ -248,6 +248,10 @@ class Plugin {
 			return false;
 		}
 
+		if ( ! function_exists( 'ftp_connect' ) ) {
+			return false;
+		}
+
 		return true;
 	}
 
