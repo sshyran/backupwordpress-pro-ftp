@@ -219,13 +219,13 @@ function hmbkpp_ftp_deactivate_license() {
 
 function hmbkpp_ftp_check_license() {
 
-	if ( empty( $license ) ) {
-		return;
-	}
-
 	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
+
+	if ( empty( $license ) ) {
+		return;
+	}
 
 	$license_data = get_transient( 'hmbkp_license_data_ftp' );
 
