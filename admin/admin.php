@@ -27,7 +27,7 @@ function hmbkpp_ftp_display_license_form() { ?>
 
 				<?php
 				printf(
-					__( '%1$sBackUpWordPress to FTP is almost ready%2$s, %3$senter your License Key to continue%4$s', 'backupwordpress' ),
+					__( '%1$sLooks like you\'ve just installed BackUpWordPress to FTP or your license has expired.%2$s, %3$senter a valid license key to continue%4$s', 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
 					'<label style="vertical-align: baseline;" for="hmbkpp_ftp_license_key">',
@@ -244,7 +244,7 @@ function hmbkpp_ftp_check_license() {
 		}
 
 		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-		set_transient( 'hmbkp_license_data_ftp', $license_data, DAY_IN_SECONDS  );
+		set_transient( 'hmbkp_license_data_ftp', $license_data, DAY_IN_SECONDS );
 	}
 
 	$valid = ( 'valid' === $license_data->license );
@@ -266,10 +266,13 @@ function hmbkpp_ftp_check_license() {
  *
  * @return bool True if expired, False otherwise.
  */
-function hmbkp_has_license_expired( $expiry ) {
+if ( ! function_exists( 'hmbkp_has_license_expired' ) ) {
 
-	$expiry_date = strtotime( $expiry );
-	$now = strtotime( 'now' );
+	function hmbkp_has_license_expired( $expiry ) {
 
-	return $expiry_date < $now;
+		$expiry_date = strtotime( $expiry );
+		$now = strtotime( 'now' );
+
+		return $expiry_date < $now;
+	}
 }

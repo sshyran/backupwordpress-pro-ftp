@@ -260,8 +260,8 @@ class Plugin {
 			return false;
 		}
 
-		if ( false === hmbkpp_do_check_license() ) {
-			$this->notice = __( 'BackUpWordPress to FTP license has expired. Renew it today by visiting https://bwp.hmn.md/downloads/backupwordpress-to-ftp/', 'backupwordpress' );
+		if ( false === hmbkpp_ftp_check_license() ) {
+			$this->notice = __( 'BackUpWordPress to FTP license has expired. Please renew it to continue to get updates.">our store</a>', 'backupwordpress' );
 			return false;
 		}
 
