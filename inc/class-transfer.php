@@ -27,6 +27,11 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 	protected $connection;
 
 	/**
+	 * @var Backup
+	 */
+	protected $backup;
+
+	/**
 	 * Fire the FTP transfer on the hmbkp_backup_complete
 	 *
 	 * @see  HM_Backup::do_action
@@ -37,11 +42,13 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 	 */
 	public function action( $action, BackUpWordPress\Backup $backup ) {
 
+		$this->backup = $backup;
+
 		if ( ( 'hmbkp_backup_complete' === $action ) && $this->get_field_value( 'FTP' ) ) {
 
 			$this->schedule->set_status( __( 'Uploading to FTP', 'backupwordpress' ) );
 
-			$file = $backup->get_archive_filepath();
+			$file = $this->backup->get_archive_filepath();
 
 			$this->credentials = array(
 				'host'        => $this->get_field_value( 'hostname' ),
@@ -76,7 +83,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 		$result = $this->connection->upload( $file, pathinfo( $file, PATHINFO_BASENAME ) );
 
 		if ( is_wp_error( $result ) ) {
-			$backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			$this->backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 		} else {
 			//$this->delete_old_backups();
 		}
@@ -223,7 +230,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo esc_attr( $hostname ); ?>"/>
+					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo $hostname; ?>"/>
 
 				</td>
 
@@ -265,7 +272,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 
 				<td>
 
-					<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo esc_attr( $username ); ?>"/>
+					<input type="text" id="<?php echo $this->get_field_name( 'username' ); ?>" name="<?php echo $this->get_field_name( 'username' ); ?>" value="<?php echo $username; ?>"/>
 
 				</td>
 
@@ -281,7 +288,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 
 				<td>
 
-					<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo esc_attr( $pwd ); ?>"/>
+					<input type="password" id="<?php echo $this->get_field_name( 'password' ); ?>" name="<?php echo $this->get_field_name( 'password' ); ?>" value="<?php echo $pwd; ?>"/>
 
 				</td>
 
@@ -438,13 +445,18 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 					$this->connection = new SFTP( $this->credentials );
 					break;
 				default:
-					$this->schedule->error( 'FTP', __( 'An unexpected error occurred: %s', 'backupwordpress' ) );
+					$this->backup->error( 'FTP', __( 'An unexpected error occurred: %s', 'backupwordpress' ) );
 					break;
 			}
 			$result = $this->connection->test_options( $this->credentials );
 
 			if ( is_wp_error( $result ) ) {
-				$this->schedule->backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+				hmbkp_add_settings_error( sprintf( __( 'FTP Connection Error:  %s', 'backupwordpress' ), $result->get_error_message() ) );
+
+			}
+
+			if ( 0 < count( $errors ) ) {
+				hmbkp_add_settings_error( sprintf( __( 'FTP Settings Error:  %s', 'backupwordpress' ), implode( ', ', $errors ) ) );
 			}
 
 		}

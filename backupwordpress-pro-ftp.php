@@ -45,12 +45,12 @@ class Plugin {
 	/**
 	 * The plugin version number.
 	 */
-	const PLUGIN_VERSION = '2.0.6';
+	const PLUGIN_VERSION = '2.0.7';
 
 	/**
 	 * Minimum version of BackUpWordPress compatibility.
 	 */
-	const MIN_BWP_VERSION = '3.1.2';
+	const MIN_BWP_VERSION = '3.1.4';
 
 	/**
 	 * URL for the updater to ping for a new version.
@@ -71,6 +71,11 @@ class Plugin {
 	 * @var BackUpWordPress_FTP The instance of this class.
 	 */
 	private static $instance;
+
+	/**
+	 * @var string Error message displayed to user.
+	 */
+	protected $notice;
 
 	/**
 	 * Instantiates a new object
@@ -108,6 +113,7 @@ class Plugin {
 		}
 
 		delete_option( 'hmbkpp_ftp_settings' );
+		delete_transient( 'hmbkp_license_data_dx' );
 	}
 
 	/**
@@ -225,7 +231,7 @@ class Plugin {
 	public function get_notice_message() {
 
 		return sprintf(
-			__( '%1$s requires BackUpWordPress version %2$s. Please install or update it first.', 'backupwordpress' ),
+			$this->notice,
 			self::EDD_DOWNLOAD_FILE_NAME,
 			self::MIN_BWP_VERSION
 		);
@@ -245,10 +251,12 @@ class Plugin {
 		$bwp = BackUpWordPress\Plugin::get_instance();
 
 		if ( version_compare( BackUpWordPress\Plugin::PLUGIN_VERSION, self::MIN_BWP_VERSION, '<' ) ) {
+			$this->notice = __( '%1$s requires BackUpWordPress version %2$s. Please install or update it first.', 'backupwordpress' );
 			return false;
 		}
 
 		if ( ! function_exists( 'ftp_connect' ) ) {
+			$this->notice = __( 'FTP functions are not enabled on the server' );
 			return false;
 		}
 

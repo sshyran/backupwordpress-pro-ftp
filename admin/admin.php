@@ -219,33 +219,57 @@ function hmbkpp_ftp_deactivate_license() {
 
 function hmbkpp_ftp_check_license() {
 
-	global $wp_version;
+	if ( empty( $license ) ) {
+		return;
+	}
 
 	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
-	$api_params = array(
-		'edd_action' => 'check_license',
-		'license' => $license,
-		'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME )
-	);
+	$license_data = get_transient( 'hmbkp_license_data_ftp' );
 
-	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	if ( false === $license_data ) {
+		$api_params = array(
+			'edd_action' => 'check_license',
+			'license' => $license,
+			'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME )
+		);
 
-	if ( is_wp_error( $response ) )
-		return false;
+		// Call the custom API.
+		$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
-	$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
 
-	if( $license_data->license == 'valid' ) {
-		echo 'valid';
-		exit;
+		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+		set_transient( 'hmbkp_license_data_ftp' );
+	}
+
+	$valid = ( 'valid' === $license_data->license );
+	$expired = hmbkp_has_license_expired( $license_data->expires );
+
+	if ( $valid && ! $expired ) {
+		return true;
 		// this license is still valid
 	} else {
-		echo 'invalid';
-		exit;
+		return false;
 		// this license is no longer valid
 	}
+}
+
+/**
+ * Check the license expiry date against current date.
+ *
+ * @param $expiry
+ *
+ * @return bool True if expired, False otherwise.
+ */
+function hmbkp_has_license_expired( $expiry ) {
+
+	$expiry_date = strtotime( $expiry );
+	$now = strtotime( 'now' );
+
+	return $expiry_date < $now;
 }
