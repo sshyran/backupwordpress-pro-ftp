@@ -244,7 +244,7 @@ function hmbkpp_ftp_check_license() {
 		}
 
 		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-		set_transient( 'hmbkp_license_data_ftp' );
+		set_transient( 'hmbkp_license_data_ftp', $license_data, DAY_IN_SECONDS  );
 	}
 
 	$valid = ( 'valid' === $license_data->license );
