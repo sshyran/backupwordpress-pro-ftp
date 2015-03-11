@@ -261,7 +261,7 @@ class Plugin {
 		}
 
 		if ( false === hmbkpp_ftp_check_license() ) {
-			$this->notice = __( 'BackUpWordPress to FTP license has expired. Please renew it to continue to get updates.">our store</a>', 'backupwordpress' );
+			$this->notice = __( 'Your BackUpWordPress to FTP license has expired, renew it now to continue to receive updates and support. Thanks!', 'backupwordpress' );
 			return false;
 		}
 
