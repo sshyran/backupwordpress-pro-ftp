@@ -4,9 +4,9 @@ namespace HM\BackUpWordPressFTP;
 use HM\BackUpWordPress;
 
 /**
- * Class HMBKP_Requirement_Define_HMBKP_FS_METHOD
+ * Class Define_FS_Method
  */
-class HMBKP_Requirement_Define_HMBKP_FS_METHOD extends BackUpWordPress\Requirement {
+class Define_FS_Method extends BackUpWordPress\Requirement {
 
 	/**
 	 * @var string
@@ -24,12 +24,12 @@ class HMBKP_Requirement_Define_HMBKP_FS_METHOD extends BackUpWordPress\Requireme
 
 }
 
-BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\HMBKP_Requirement_Define_HMBKP_FS_METHOD', 'ftp' );
+BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\Define_FS_Method', 'ftp' );
 
 /**
- * Class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS
+ * Class Define_License_Status
  */
-class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends BackUpWordPress\Requirement {
+class Define_License_Status extends BackUpWordPress\Requirement {
 
 	var $name = 'License Status';
 
@@ -47,4 +47,4 @@ class HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS extends BackUpWordPress
 
 }
 
-BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\HMBKP_Requirement_Define_HMBKPP_FTP_LICENSE_STATUS', 'ftp' );
+BackUpWordPress\Requirements::register( 'HM\BackUpWordPressFTP\Define_License_Status', 'ftp' );

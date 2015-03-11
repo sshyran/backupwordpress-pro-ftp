@@ -27,7 +27,7 @@ function hmbkpp_ftp_display_license_form() { ?>
 
 				<?php
 				printf(
-					__( '%1$sBackUpWordPress to FTP is almost ready%2$s, %3$senter your License Key to continue%4$s', 'backupwordpress' ),
+					__( '%1$sLooks like you\'ve just installed BackUpWordPress to FTP or your license has expired.%2$s, %3$senter a valid license key to continue%4$s', 'backupwordpress' ),
 					'<strong>',
 					'</strong>',
 					'<label style="vertical-align: baseline;" for="hmbkpp_ftp_license_key">',
@@ -219,33 +219,60 @@ function hmbkpp_ftp_deactivate_license() {
 
 function hmbkpp_ftp_check_license() {
 
-	global $wp_version;
-
 	$plugin = \HM\BackUpWordPressFTP\Plugin::get_instance();
 	$settings = $plugin->fetch_settings();
 	$license = $settings['license_key'];
 
-	$api_params = array(
-		'edd_action' => 'check_license',
-		'license' => $license,
-		'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME )
-	);
+	if ( empty( $license ) ) {
+		return;
+	}
 
-	// Call the custom API.
-	$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
+	$license_data = get_transient( 'hmbkp_license_data_ftp' );
 
-	if ( is_wp_error( $response ) )
-		return false;
+	if ( false === $license_data ) {
+		$api_params = array(
+			'edd_action' => 'check_license',
+			'license' => $license,
+			'item_name' => urlencode( \HM\BackUpWordPressFTP\Plugin::EDD_DOWNLOAD_FILE_NAME )
+		);
 
-	$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+		// Call the custom API.
+		$response = wp_remote_get( add_query_arg( $api_params, \HM\BackUpWordPressFTP\Plugin::EDD_STORE_URL ), array( 'timeout' => 15, 'sslverify' => false ) );
 
-	if( $license_data->license == 'valid' ) {
-		echo 'valid';
-		exit;
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+		set_transient( 'hmbkp_license_data_ftp', $license_data, DAY_IN_SECONDS );
+	}
+
+	$valid = ( 'valid' === $license_data->license );
+	$expired = hmbkp_has_license_expired( $license_data->expires );
+
+	if ( $valid && ! $expired ) {
+		return true;
 		// this license is still valid
 	} else {
-		echo 'invalid';
-		exit;
+		return false;
 		// this license is no longer valid
+	}
+}
+
+/**
+ * Check the license expiry date against current date.
+ *
+ * @param $expiry
+ *
+ * @return bool True if expired, False otherwise.
+ */
+if ( ! function_exists( 'hmbkp_has_license_expired' ) ) {
+
+	function hmbkp_has_license_expired( $expiry ) {
+
+		$expiry_date = strtotime( $expiry );
+		$now = strtotime( 'now' );
+
+		return $expiry_date < $now;
 	}
 }
