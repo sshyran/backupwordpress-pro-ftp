@@ -1,5 +1,15 @@
 {
-    "require": {
-        "phpseclib/phpseclib": "~0.3"
+  "name": "humanmade/backupwordpress-pro-ftp",
+  "description": "Back up your site to FTP.",
+  "require": {
+    "pimple/pimple": "~3.0",
+    "phpseclib/phpseclib": "~0.3",
+    "humanmade/bwp-common": "dev-master"
+  },
+  "authors": [
+    {
+      "name": "Human Made Limited",
+      "email": "hello@hmn.md"
     }
+  ]
 }

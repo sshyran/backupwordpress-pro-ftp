@@ -1,6 +1,4 @@
-<?php
-
-namespace HM\BackUpWordPressFTP;
+<?php namespace HM\BackUpWordPress;
 
 /**
  * Class SFTP

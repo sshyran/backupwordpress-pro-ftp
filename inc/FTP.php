@@ -1,5 +1,4 @@
-<?php
-namespace HM\BackUpWordPressFTP;
+<?php namespace HM\BackUpWordPress;
 
 /**
  * Class HMBKP_FTP
