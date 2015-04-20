@@ -29,6 +29,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Pimple\Container;
@@ -38,8 +39,13 @@ $container = new Container();
 require __DIR__ . '/inc/Config.php';
 require __DIR__ . '/inc/Services.php';
 
-add_action( 'backupwordpress_loaded', function() use ( $container ) {
-	$addon = $container['addon'];
-	$admin = $container['admin'];
+$addon = $container['addon'];
+
+register_activation_hook( __FILE__, array( $addon, 'maybe_self_deactivate' ) );
+
+$admin = $container['admin'];
+
+add_action( 'backupwordpress_loaded', function() use ( $container, $addon ){
+
 	$addon->register( __DIR__ . '/inc/' );
-} );
+});

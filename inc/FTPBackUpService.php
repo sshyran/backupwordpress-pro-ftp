@@ -494,5 +494,3 @@ class FTPBackUpService extends Service {
 	public static function intercom_data_html() {}
 
 }
-
-Services::register( __FILE__, 'HM\BackUpWordPress\FTPBackUpService' );
