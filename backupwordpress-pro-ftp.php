@@ -47,5 +47,5 @@ $admin = $container['admin'];
 
 add_action( 'backupwordpress_loaded', function() use ( $container, $addon ){
 
-	$addon->register( __DIR__ . '/inc/' );
+	require_once __DIR__ . '/inc/FTPBackUpService.php';
 });
