@@ -6,6 +6,6 @@ $container['addon_version'] = '2.0.7';
 $container['min_bwp_version'] = '3.1.4';
 $container['edd_download_file_name'] = 'BackUpWordPress To FTP';
 $container['addon_settings'] = 'hmbkpp_ftp_settings';
-$container['transient_name'] = 'hmbkp_license_data_dx';
 $container['service_class'] = 'FTPBackUpService';
 $container['updater_class'] = 'HM\\BackUpWordPress\\PluginUpdater';
+$container['prefix'] = 'ftp';
