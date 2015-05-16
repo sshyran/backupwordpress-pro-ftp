@@ -1,16 +1,14 @@
-<?php
-namespace HM\BackUpWordPressFTP;
+<?php namespace HM\BackUpWordPress;
 
-use HM\BackUpWordPress;
+require_once plugin_dir_path( __FILE__ ) . 'Encryption.php';
+require_once plugin_dir_path( __FILE__ ) . 'FTP.php';
+require_once plugin_dir_path( __FILE__ ) . 'SFTP.php';
 
-require_once plugin_dir_path( __FILE__ ) . 'class-encryption.php';
-require_once plugin_dir_path( __FILE__ ) . 'class-ftp.php';
-require_once plugin_dir_path( __FILE__ ) . 'class-sftp.php';
 
 /**
  * Class FTP_Backup_Service
  */
-class FTP_Backup_Service extends BackUpWordPress\Service {
+class FTPBackUpService extends Service {
 
 	/**
 	 * Human readable name
@@ -40,7 +38,7 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 	 *
 	 * @return void
 	 */
-	public function action( $action, BackUpWordPress\Backup $backup ) {
+	public function action( $action, Backup $backup ) {
 
 		$this->backup = $backup;
 
@@ -488,50 +486,13 @@ class FTP_Backup_Service extends BackUpWordPress\Service {
 	 *
 	 * @return array
 	 */
-	public static function intercom_data() {
-
-		require_once plugin_dir_path( __FILE__ ) . 'class-requirements.php';
-
-		$info = array();
-
-		foreach ( BackUpWordPress\Requirements::get_requirements( 'ftp' ) as $requirement ) {
-			$info[ $requirement->name() ] = $requirement->result();
-		}
-
-		return $info;
-	}
+	public static function intercom_data() { return array(); }
 
 	/**
 	 * FTP specific data to show in the admin help tab.
 	 */
-	public static function intercom_data_html() {
-
-		require_once plugin_dir_path( __FILE__ ) . 'class-requirements.php'; ?>
-
-		<h3><?php _e( 'FTP', 'backupwordpress' ); ?></h3>
-
-		<table class="fixed widefat">
-
-			<tbody>
-
-			<?php foreach ( BackUpWordPress\Requirements::get_requirements( 'ftp' ) as $requirement ) : ?>
-
-				<tr>
-					<td><?php echo $requirement->name(); ?></td>
-					<td>
-						<pre><?php echo $requirement->result(); ?></pre>
-					</td>
-				</tr>
-
-			<?php endforeach; ?>
-
-			</tbody>
-
-		</table>
-
-	<?php
-	}
+	public static function intercom_data_html() {}
 
 }
 
-BackUpWordPress\Services::register( __FILE__, 'HM\BackUpWordPressFTP\FTP_Backup_Service' );
+Services::register( __FILE__, 'HM\BackUpWordPress\FTPBackUpService' );

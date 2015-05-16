@@ -4,7 +4,7 @@ Plugin Name: BackUpWordPress to FTP
 Plugin URI: https://bwp.hmn.md/downloads/backupwordpress-to-ftp/
 Description: Send your backups to your FTP account
 Author: Human Made Limited
-Version: 2.0.7
+Version: 2.1.0
 Author URI: https://bwp.hmn.md/
 License: GPLv2
 Network: true
@@ -29,244 +29,23 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-namespace HM\BackUpWordPressFTP;
 
-use HM\BackUpWordPress;
+require_once __DIR__ . '/vendor/autoload.php';
 
-register_activation_hook( __FILE__, array( 'HM\BackUpWordPressFTP\Plugin', 'on_activation' ) );
+use Pimple\Container;
 
-register_deactivation_hook( __FILE__, array( 'HM\BackUpWordPressFTP\Plugin', 'on_deactivation' ) );
+$container = new Container();
 
-/**
- * Class Plugin
- */
-class Plugin {
+require __DIR__ . '/inc/Config.php';
+require __DIR__ . '/inc/Services.php';
 
-	/**
-	 * The plugin version number.
-	 */
-	const PLUGIN_VERSION = '2.0.7';
+$addon = $container['addon'];
 
-	/**
-	 * Minimum version of BackUpWordPress compatibility.
-	 */
-	const MIN_BWP_VERSION = '3.1.4';
+register_activation_hook( __FILE__, array( $addon, 'maybe_self_deactivate' ) );
 
-	/**
-	 * URL for the updater to ping for a new version.
-	 */
-	const EDD_STORE_URL = 'https://bwp.hmn.md';
+$admin = $container['admin'];
 
-	/**
-	 * File name for EDD updates to check against for updates.
-	 */
-	const EDD_DOWNLOAD_FILE_NAME = 'BackUpWordPress to FTP';
+add_action( 'backupwordpress_loaded', function() {
 
-	/**
-	 * Required by EDD licensing plugin API.
-	 */
-	const EDD_PLUGIN_AUTHOR = 'Human Made Limited';
-
-	/**
-	 * @var BackUpWordPress_FTP The instance of this class.
-	 */
-	private static $instance;
-
-	/**
-	 * @var string Error message displayed to user.
-	 */
-	protected $notice;
-
-	/**
-	 * Instantiates a new object
-	 */
-	private function __construct() {
-
-		add_action( 'backupwordpress_loaded', array( $this, 'init' ) );
-		add_action( 'admin_init', array( $this, 'maybe_self_deactivate' ) );
-	}
-
-	/**
-	 * @return Plugin
-	 */
-	public static function get_instance() {
-
-		if ( ! ( self::$instance instanceof Plugin ) ) {
-			self::$instance = new Plugin();
-		}
-
-		return self::$instance;
-	}
-
-	/**
-	 * Fires on plugin activation. Checks plugin requirements, and interrupts activation if not met.
-	 */
-	public static function on_activation() {}
-
-	/**
-	 * Performs a cleanup on deactivation.
-	 */
-	public static function on_deactivation() {
-
-		if ( ! current_user_can( 'activate_plugins' ) ) {
-			return;
-		}
-
-		delete_option( 'hmbkpp_ftp_settings' );
-		delete_transient( 'hmbkp_license_data_dx' );
-	}
-
-	/**
-	 * PLugin setup routine.
-	 */
-	public function init() {
-
-		$this->includes();
-
-		$this->plugin_updater();
-
-		$this->hooks();
-
-	}
-
-	/**
-	 * Self deactivate ourself if incompatibility found.
-	 */
-	public function maybe_self_deactivate() {
-
-		if ( $this->meets_requirements() ) {
-			return;
-		}
-
-		deactivate_plugins( plugin_basename( __FILE__ ) );
-		add_action( 'admin_notices', array( $this, 'display_admin_notices' ) );
-
-		if ( isset( $_GET['activate'] ) ) {
-			unset( $_GET['activate'] );
-		}
-
-	}
-
-	/**
-	 * Include required scripts and classes.
-	 */
-	protected function includes() {
-
-		if ( ! class_exists( '\HMBKPP_SL_Plugin_Updater' ) ) {
-			include( plugin_dir_path( __FILE__ ) . 'assets/edd-plugin-updater/HMBKPP-SL-Plugin-Updater.php' );
-		}
-
-		require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
-
-		require_once plugin_dir_path( __FILE__ ) . 'admin/admin.php';
-
-		require_once plugin_dir_path( __FILE__ ) . 'inc/class-transfer.php';
-
-	}
-
-	/**
-	 * Sets up the EDD licensing check.
-	 */
-	protected function plugin_updater() {
-
-		// Retrieve our license key from the DB
-		$settings = $this->fetch_settings();
-
-		$license_key = $settings['license_key'];
-
-		// Setup the updater
-		$edd_updater = new \HMBKPP_SL_Plugin_Updater( self::EDD_STORE_URL, __FILE__, array(
-				'version'   => self::PLUGIN_VERSION, // current version number
-				'license'   => $license_key, // license key (used get_option above to retrieve from DB)
-				'item_name' => self::EDD_DOWNLOAD_FILE_NAME, // name of this plugin
-				'author'    => self::EDD_PLUGIN_AUTHOR, // author of this plugin
-			)
-		);
-
-	}
-
-	/**
-	 * Register our hooked functions.
-	 */
-	protected function hooks() {}
-
-	/**
-	 * Returns an array of default values for plugin settings.
-	 *
-	 * @return array
-	 */
-	public function default_settings() {
-
-		$defaults = array(
-			'license_key'    => '',
-			'license_status' => '',
-		);
-
-		return $defaults;
-	}
-
-	/**
-	 * Fetch the plugin settings
-	 *
-	 * @return array
-	 */
-	public function fetch_settings() {
-		return array_merge( $this->default_settings(), get_option( 'hmbkpp_ftp_settings', array() ) );
-	}
-
-	/**
-	 * Displays a user friendly message in the WordPress admin.
-	 */
-	public function display_admin_notices() {
-
-		echo '<div class="error"><p>' . esc_html( self::get_notice_message() ) . '</p></div>';
-
-	}
-
-	/**
-	 * Returns a localized user friendly error message.
-	 *
-	 * @return string
-	 */
-	public function get_notice_message() {
-
-		return sprintf(
-			$this->notice,
-			self::EDD_DOWNLOAD_FILE_NAME,
-			self::MIN_BWP_VERSION
-		);
-	}
-
-	/**
-	 * Check if current WordPress install meets necessary requirements.
-	 *
-	 * @return bool True is passes checks, false otherwise.
-	 */
-	public function meets_requirements() {
-
-		if ( ! class_exists( 'HM\BackUpWordPress\Plugin' ) ) {
-			return false;
-		}
-
-		$bwp = BackUpWordPress\Plugin::get_instance();
-
-		if ( version_compare( BackUpWordPress\Plugin::PLUGIN_VERSION, self::MIN_BWP_VERSION, '<' ) ) {
-			$this->notice = __( '%1$s requires BackUpWordPress version %2$s. Please install or update it first.', 'backupwordpress' );
-			return false;
-		}
-
-		if ( ! function_exists( 'ftp_connect' ) ) {
-			$this->notice = __( 'FTP functions are not enabled on the server' );
-			return false;
-		}
-
-		if ( false === hmbkpp_ftp_check_license() ) {
-			$this->notice = __( 'Your BackUpWordPress to FTP license has expired, renew it now to continue to receive updates and support. Thanks!', 'backupwordpress' );
-			return false;
-		}
-
-		return true;
-	}
-
-}
-Plugin::get_instance();
+	require_once __DIR__ . '/inc/FTPBackUpService.php';
+});
