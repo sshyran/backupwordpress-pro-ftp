@@ -4,7 +4,7 @@
   "require": {
     "pimple/pimple": "~3.0",
     "phpseclib/phpseclib": "~0.3",
-    "humanmade/bwp-common": "0.2.*@dev"
+    "humanmade/bwp-common": "dev-master"
   },
   "authors": [
     {
