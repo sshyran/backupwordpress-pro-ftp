@@ -8,5 +8,5 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 // delete plugin option
-delete_option( 'hmbkpp_ftp_settings' );
+delete_site_option( 'hmbkpp_ftp_settings' );
 delete_transient( 'hmbkp_license_data_dx' );
