@@ -4,7 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "01d3dcd50e469d054bc7e4b284deb963",
+    "hash": "3d13ecbde63b74aa5387a81004167b17",
+    "content-hash": "03ef7d8d1c64a5da1aead11d914a158d",
     "packages": [
         {
             "name": "humanmade/bwp-common",
@@ -12,12 +13,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/humanmade/BackUpWordPress-Common.git",
-                "reference": "603101c54929b48f29f66f37e93dac01d7a8b728"
+                "reference": "d75677b2ca9d1d10481562320e375cb78557d36f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/humanmade/BackUpWordPress-Common/zipball/603101c54929b48f29f66f37e93dac01d7a8b728",
-                "reference": "603101c54929b48f29f66f37e93dac01d7a8b728",
+                "url": "https://api.github.com/repos/humanmade/BackUpWordPress-Common/zipball/d75677b2ca9d1d10481562320e375cb78557d36f",
+                "reference": "d75677b2ca9d1d10481562320e375cb78557d36f",
                 "shasum": ""
             },
             "type": "wordpress-plugin",
@@ -46,7 +47,7 @@
                 "backup",
                 "wordpress"
             ],
-            "time": "2015-07-02 13:41:45"
+            "time": "2015-07-28 14:17:54"
         },
         {
             "name": "phpseclib/phpseclib",
@@ -148,16 +149,16 @@
         },
         {
             "name": "pimple/pimple",
-            "version": "v3.0.0",
+            "version": "v3.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/silexphp/Pimple.git",
-                "reference": "876bf0899d01feacd2a2e83f04641e51350099ef"
+                "reference": "a30f7d6e57565a2e1a316e1baf2a483f788b258a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/silexphp/Pimple/zipball/876bf0899d01feacd2a2e83f04641e51350099ef",
-                "reference": "876bf0899d01feacd2a2e83f04641e51350099ef",
+                "url": "https://api.github.com/repos/silexphp/Pimple/zipball/a30f7d6e57565a2e1a316e1baf2a483f788b258a",
+                "reference": "a30f7d6e57565a2e1a316e1baf2a483f788b258a",
                 "shasum": ""
             },
             "require": {
@@ -184,13 +185,13 @@
                     "email": "fabien@symfony.com"
                 }
             ],
-            "description": "Pimple is a simple Dependency Injection Container for PHP 5.3",
+            "description": "Pimple, a simple Dependency Injection Container",
             "homepage": "http://pimple.sensiolabs.org",
             "keywords": [
                 "container",
                 "dependency injection"
             ],
-            "time": "2014-07-24 09:48:15"
+            "time": "2015-09-11 15:10:35"
         }
     ],
     "packages-dev": [],
