@@ -4,7 +4,7 @@ Plugin Name: BackUpWordPress to FTP
 Plugin URI: https://bwp.hmn.md/downloads/backupwordpress-to-ftp/
 Description: Send your backups to your FTP account
 Author: Human Made Limited
-Version: 2.1.5
+Version: 2.1.6
 Author URI: https://bwp.hmn.md/
 License: GPLv2
 Network: true
