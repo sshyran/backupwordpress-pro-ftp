@@ -13,12 +13,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/humanmade/backupwordpress-common.git",
-                "reference": "022ded4743b2c245e88a8398983ada25007321f8"
+                "reference": "54ad8bc818ab6cc99492c03d7fada8b117877c61"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/humanmade/backupwordpress-common/zipball/022ded4743b2c245e88a8398983ada25007321f8",
-                "reference": "022ded4743b2c245e88a8398983ada25007321f8",
+                "url": "https://api.github.com/repos/humanmade/backupwordpress-common/zipball/54ad8bc818ab6cc99492c03d7fada8b117877c61",
+                "reference": "54ad8bc818ab6cc99492c03d7fada8b117877c61",
                 "shasum": ""
             },
             "type": "wordpress-plugin",
@@ -47,7 +47,7 @@
                 "backup",
                 "wordpress"
             ],
-            "time": "2016-02-03 14:48:10"
+            "time": "2016-02-04 15:31:09"
         },
         {
             "name": "phpseclib/phpseclib",
