@@ -44,9 +44,9 @@ class FTPBackUpService extends Service {
 
 		if ( ( 'hmbkp_backup_complete' === $action ) && $this->get_field_value( 'FTP' ) ) {
 
-			$this->schedule->set_status( __( 'Uploading to FTP', 'backupwordpress' ) );
+			$this->schedule->status->set_status( __( 'Uploading to FTP', 'backupwordpress' ) );
 
-			$file = $this->backup->get_archive_filepath();
+			$file = $this->backup->get_backup_filepath();
 
 			$this->credentials = array(
 				'host'        => $this->get_field_value( 'hostname' ),
@@ -76,12 +76,12 @@ class FTPBackUpService extends Service {
 	public function do_backup( $file ) {
 
 		// Give feedback on progress
-		$this->schedule->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress' ), $this->credentials['host'] ) );
+		$this->schedule->status->set_status( sprintf( __( 'Uploading a copy to %s', 'backupwordpress' ), $this->credentials['host'] ) );
 
 		$result = $this->connection->upload( $file, pathinfo( $file, PATHINFO_BASENAME ) );
 
 		if ( is_wp_error( $result ) ) {
-			$this->backup->error( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
+			$this->backup->warning( 'FTP', sprintf( __( 'An error occurred: %s', 'backupwordpress' ), $result->get_error_message() ) );
 		} else {
 			//$this->delete_old_backups();
 		}
@@ -443,7 +443,7 @@ class FTPBackUpService extends Service {
 					$this->connection = new SFTP( $this->credentials );
 					break;
 				default:
-					$this->backup->error( 'FTP', __( 'An unexpected error occurred: %s', 'backupwordpress' ) );
+					$this->backup->warning( 'FTP', __( 'An unexpected error occurred: %s', 'backupwordpress' ) );
 					break;
 			}
 			$result = $this->connection->test_options( $this->credentials );
