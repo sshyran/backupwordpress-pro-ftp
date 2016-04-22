@@ -12,7 +12,6 @@ class SFTP {
 	public function __construct( $options ) {
 
 		$this->options = $options;
-		$this->options['port'] = 22;
 	}
 
 	public function __get( $property ) {
@@ -60,7 +59,7 @@ class SFTP {
 	 */
 	public function test_options( $options ) {
 
-		$this->connect( $options['host'] );
+		$this->connect( $options['host'], $options['port'] );
 
 		if ( ! ( $this->connection instanceof \Net_SFTP ) ) {
 			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $options['host'], $options['port'] ) );
@@ -92,7 +91,7 @@ class SFTP {
 			return;
 		}
 
-		$this->connection = new \Net_SFTP( $host );
+		$this->connection = new \Net_SFTP( $host, $port );
 
 		if ( ! $this->connection ) {
 			return new \WP_Error( 'sftp-connection-error', sprintf( 'Could not connect to host %1$s on port %$2s', $host, $port ) );
@@ -102,7 +101,7 @@ class SFTP {
 
 	public function login() {
 
-		$this->connect( $this->options['host'] );
+		$this->connect( $this->options['host'], $this->options['port'] );
 
 		if ( ! ( $this->connection instanceof \Net_SFTP ) ) {
 			return new \WP_Error( 'unsuccessful-connection-error', sprintf( 'Could not connect to %$1s on port %$2s', $this->options['host'], $this->options['port'] ) );

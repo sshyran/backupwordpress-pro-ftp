@@ -17,7 +17,7 @@ class FTP {
 	public function __construct( $options ) {
 
 		$this->options = $options;
-		$this->options['port'] = 21;
+
 	}
 
 	public function __get( $property ) {
@@ -90,7 +90,7 @@ class FTP {
 	 */
 	public function test_options( $options ) {
 
-		$this->connect( $options['host'] );
+		$this->connect( $this->options['host'], $this->options['port'] );
 
 		if ( ! $this->connection ) {
 			return new \WP_Error( 'unsuccessful-connection-error', __( 'Could not connect to host', 'backupwordpress' ) );

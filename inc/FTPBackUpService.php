@@ -49,10 +49,11 @@ class FTPBackUpService extends Service {
 			$file = $this->backup->get_backup_filepath();
 
 			$this->credentials = array(
-				'host'        => $this->get_field_value( 'hostname' ),
+				'host'            => $this->get_field_value( 'hostname' ),
+				'port'            => $this->get_field_value( 'port' ),
 				'username'        => $this->get_field_value( 'username' ),
 				'password'        => Encryption::decrypt( $this->get_field_value( 'password' ) ),
-				'path' => $this->get_field_value( 'folder' ),
+				'path'            => $this->get_field_value( 'folder' ),
 			);
 
 			switch ( $this->get_field_value( 'connection_type' ) ) {
@@ -157,6 +158,12 @@ class FTPBackUpService extends Service {
 				$hostname = $options['hostname'];
 			}
 		}
+		
+		$port = $this->get_field_value( 'port' );
+		
+		if ( empty( $port ) && isset( $options['port'] ) ) {
+			$port = $options['port'];
+		}
 
 		$type = $this->get_field_value( 'connection_type' );
 
@@ -222,13 +229,29 @@ class FTPBackUpService extends Service {
 
 				<th scope="row">
 
-					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Server', 'backupwordpress' ); ?></label>
+					<label for="<?php echo $this->get_field_name( 'hostname' ); ?>"><?php _e( 'Host', 'backupwordpress' ); ?></label>
 
 				</th>
 
 				<td>
 
 					<input type="text" id="<?php echo $this->get_field_name( 'hostname' ); ?>" name="<?php echo $this->get_field_name( 'hostname' ); ?>" value="<?php echo $hostname; ?>"/>
+
+				</td>
+
+			</tr>
+
+			<tr>
+
+				<th scope="row">
+
+					<label for="<?php echo $this->get_field_name( 'port' ); ?>"><?php _e( 'Port', 'backupwordpress' ); ?></label>
+
+				</th>
+
+				<td>
+
+					<input type="text" id="<?php echo $this->get_field_name( 'port' ); ?>" name="<?php echo $this->get_field_name( 'port' ); ?>" value="<?php echo $port; ?>"/>
 
 				</td>
 
@@ -430,6 +453,7 @@ class FTPBackUpService extends Service {
 
 			$this->credentials = array(
 				'host'        => $new_data['hostname'],
+				'port'        => $new_data['port'],
 				'username'    => $new_data['username'],
 				'password'    => $test_pw,
 				'path'        => $this->get_field_value( 'folder' ),
@@ -449,12 +473,8 @@ class FTPBackUpService extends Service {
 			$result = $this->connection->test_options( $this->credentials );
 
 			if ( is_wp_error( $result ) ) {
-				hmbkp_add_settings_error( sprintf( __( 'FTP Connection Error:  %s', 'backupwordpress' ), $result->get_error_message() ) );
+				$errors['hostname'] = sprintf( __( 'FTP Connection Error:  %s', 'backupwordpress' ), $result->get_error_message() );
 
-			}
-
-			if ( 0 < count( $errors ) ) {
-				hmbkp_add_settings_error( sprintf( __( 'FTP Settings Error:  %s', 'backupwordpress' ), implode( ', ', $errors ) ) );
 			}
 
 		}
